@@ -1,7 +1,7 @@
-# CRD Autotune — Project Proposal & Implementation Source of Truth
+# Remotune — Project Proposal & Implementation Source of Truth
 
 > **Status:** Approved for implementation handoff  
-> **Project:** `CRD Autotune`  
+> **Project:** `Remotune`  
 > **Platform:** Windows  
 > **Primary stack:** Wails v3 + Go + Vue  
 > **Product form:** Tray-first background utility  
@@ -12,7 +12,7 @@
 
 # 0. Document Authority
 
-This file consolidates the complete approved direction for `CRD Autotune`.
+This file consolidates the complete approved direction for `Remotune`.
 
 Implementer agents should treat this document as the default source of truth for:
 
@@ -36,13 +36,137 @@ If an implementation detail is marked **TBD**, **Verify**, **Candidate**, or **R
 
 The most important rule is:
 
-> **CRD Autotune automates Windows settings that already exist. It does not recreate or replace the Windows settings UI.**
+> **Remotune automates Windows settings that already exist. It does not recreate or replace the Windows settings UI.**
 
 ---
 
-# 1. Executive Summary
+# 1. Brand Identity
 
-`CRD Autotune` is a lightweight Windows tray utility that runs on a computer being controlled through Chrome Remote Desktop.
+## 1.1 Official Product Name
+
+```text
+Remotune
+```
+
+`Remotune` is the official project and product brand.
+
+The previous working name/codename was:
+
+```text
+CRD Autotune
+```
+
+Do not use `CRD Autotune` as the user-facing product name in new implementation work.
+
+Use `Remotune` consistently for:
+
+- application title;
+- tray menu;
+- executable name;
+- README/project heading;
+- package/build metadata where appropriate;
+- UI copy;
+- release artifacts;
+- logs and local application directory names where migration compatibility is not required.
+
+Recommended executable name:
+
+```text
+Remotune.exe
+```
+
+Recommended local application data directory:
+
+```text
+%LOCALAPPDATA%\Remotune\
+```
+
+## 1.2 Brand Meaning
+
+The name combines:
+
+```text
+Remote + Tune → Remotune
+```
+
+It describes the product behavior without locking the brand to one remote desktop provider.
+
+The current implementation is focused on:
+
+```text
+Chrome Remote Desktop (CRD)
+```
+
+but the brand deliberately remains provider-neutral so future support for other remote-session technologies does not require renaming the product.
+
+## 1.3 Product vs Provider Naming
+
+Use the terms as follows:
+
+```text
+Remotune
+└─ Product / application brand
+
+Chrome Remote Desktop (CRD)
+└─ Current remote-session provider / trigger
+```
+
+Therefore:
+
+- say **“Remotune detected a CRD connection”**;
+- say **“Remotune applied Best Performance”**;
+- do not call the product itself “CRD”;
+- do not rename CRD-specific backend components merely to make them provider-neutral when they genuinely implement Chrome Remote Desktop behavior.
+
+Examples of acceptable technical names:
+
+```text
+CRDDetector
+CrdEventParser
+RemoteSessionDetector
+```
+
+Examples of user-facing names:
+
+```text
+Remotune
+Chrome Remote Desktop: Connected
+Automatic tuning: Active
+```
+
+## 1.4 Brand Positioning
+
+Candidate concise positioning:
+
+> **Remotune automatically tunes Windows for remote desktop sessions and restores the user's original state when the session ends.**
+
+Current CRD-specific product definition:
+
+> **Remotune is a lightweight Windows tray utility that detects Chrome Remote Desktop sessions, switches Windows Visual Effects to Best Performance, disables taskbar auto-hide while remote control is active, and restores the user's previous Windows state after disconnect.**
+
+## 1.5 Brand Boundary
+
+The brand `Remotune` must not be used as justification to broaden the product into a generic Windows tuning suite.
+
+The product remains:
+
+```text
+remote-session automation
+```
+
+not:
+
+```text
+general Windows optimizer
+```
+
+The approved product boundary in this proposal remains unchanged.
+
+---
+
+# 2. Executive Summary
+
+`Remotune` is a lightweight Windows tray utility that runs on a computer being controlled through Chrome Remote Desktop.
 
 Its purpose is to automatically switch the Controlled machine into a more remote-friendly Windows configuration while a Chrome Remote Desktop session is active.
 
@@ -75,11 +199,11 @@ The project must **not** create custom user-facing presets such as:
 
 Windows already owns that configuration surface.
 
-CRD Autotune only automates the transition.
+Remotune only automates the transition.
 
 ---
 
-# 2. Background
+# 3. Background
 
 Chrome Remote Desktop is used with two roles.
 
@@ -105,7 +229,7 @@ Current setup:
 Controlled machine = home machine
 ```
 
-`CRD Autotune` runs on the **Controlled machine**.
+`Remotune` runs on the **Controlled machine**.
 
 That is where:
 
@@ -116,7 +240,7 @@ That is where:
 
 ---
 
-# 3. Problem Statement
+# 4. Problem Statement
 
 A Windows desktop configured for direct physical use is not always ideal for remote use.
 
@@ -124,7 +248,7 @@ Two concrete pain points motivated the project.
 
 ---
 
-# 4. Pain Point — Windows Animation Over Remote Desktop
+# 5. Pain Point — Windows Animation Over Remote Desktop
 
 The Controlled machine normally has Windows Visual Effects enabled.
 
@@ -159,7 +283,7 @@ Instead, it reduces unnecessary visual motion at the source by using the Windows
 
 ---
 
-# 5. Clarification — What “Best Appearance” and “Best Performance” Mean
+# 6. Clarification — What “Best Appearance” and “Best Performance” Mean
 
 The terms in this project refer specifically to:
 
@@ -197,11 +321,11 @@ Adjust for best performance
 
 in this Windows Performance Options UI.
 
-CRD Autotune must not invent a different meaning for the term.
+Remotune must not invent a different meaning for the term.
 
 ---
 
-# 6. Pain Point — Auto-Hide Taskbar Conflict
+# 7. Pain Point — Auto-Hide Taskbar Conflict
 
 The Controlled machine normally uses taskbar auto-hide.
 
@@ -245,7 +369,7 @@ Taskbar auto-hide
 
 ---
 
-# 7. Final Product Behavior
+# 8. Final Product Behavior
 
 The approved lifecycle is:
 
@@ -277,7 +401,7 @@ Original Windows state
 
 ---
 
-# 8. Why Restore Previous State Instead of Forcing Best Appearance
+# 9. Why Restore Previous State Instead of Forcing Best Appearance
 
 The original idea used:
 
@@ -296,7 +420,7 @@ Custom
 
 or may have intentionally disabled some Visual Effects.
 
-If CRD Autotune always forces:
+If Remotune always forces:
 
 ```text
 Best Appearance
@@ -317,11 +441,11 @@ Disconnected
 
 This is a backend reliability requirement.
 
-It does **not** mean CRD Autotune should expose the Windows checkbox list in its own UI.
+It does **not** mean Remotune should expose the Windows checkbox list in its own UI.
 
 ---
 
-# 9. Product Principle
+# 10. Product Principle
 
 The product owns the **automation**, not the Windows configuration model.
 
@@ -331,7 +455,7 @@ Correct responsibility:
 Windows
 └─ Owns Performance Options / Visual Effects
 
-CRD Autotune
+Remotune
 └─ Detects CRD session
    └─ temporarily switches Windows
       └─ restores Windows afterwards
@@ -340,7 +464,7 @@ CRD Autotune
 Incorrect direction:
 
 ```text
-CRD Autotune
+Remotune
 └─ Rebuild Performance Options
    ├─ Visual Effect checkboxes
    ├─ Remote presets
@@ -352,7 +476,7 @@ The incorrect direction is explicitly rejected.
 
 ---
 
-# 10. Explicitly Rejected Product Direction
+# 11. Explicitly Rejected Product Direction
 
 The following ideas were discussed and rejected as overengineering:
 
@@ -375,13 +499,13 @@ That complexity must stay internal.
 
 ---
 
-# 11. Scope
+# 12. Scope
 
 The approved functional scope is intentionally small.
 
 ## 11.1 Automation Controls
 
-CRD Autotune may allow the user to enable/disable:
+Remotune may allow the user to enable/disable:
 
 ```text
 Automatic tuning
@@ -394,7 +518,7 @@ Visual Effects automation
 Taskbar auto-hide automation
 ```
 
-These toggles control whether CRD Autotune performs the existing Windows actions.
+These toggles control whether Remotune performs the existing Windows actions.
 
 They do not expose the internal Visual Effects checklist.
 
@@ -412,9 +536,9 @@ A manual `Apply Best Performance Now` / diagnostic action may exist for developm
 
 ---
 
-# 12. Non-Goals
+# 13. Non-Goals
 
-CRD Autotune is not:
+Remotune is not:
 
 - a Chrome Remote Desktop replacement;
 - a remote desktop client;
@@ -430,7 +554,7 @@ CRD Autotune is not:
 
 ---
 
-# 13. Product Form — Tray-First Utility
+# 14. Product Form — Tray-First Utility
 
 The application should be designed as a background tray utility.
 
@@ -450,7 +574,7 @@ What should **not** be copied:
 
 - its domain-specific controls;
 - its exact layout;
-- its density if CRD Autotune does not need it;
+- its density if Remotune does not need it;
 - any unnecessary settings.
 
 The goal is:
@@ -459,7 +583,7 @@ The goal is:
 
 ---
 
-# 14. UX Philosophy
+# 15. UX Philosophy
 
 The desired user relationship with the app is:
 
@@ -467,7 +591,7 @@ The desired user relationship with the app is:
 Configure once
 → leave it in the tray
 → use CRD normally
-→ CRD Autotune reacts automatically
+→ Remotune reacts automatically
 ```
 
 The product succeeds if the user rarely needs to open it.
@@ -478,7 +602,7 @@ The background logic is the real product.
 
 ---
 
-# 15. Main Window Direction
+# 16. Main Window Direction
 
 Recommended dimensions:
 
@@ -501,7 +625,7 @@ Candidate conceptual layout:
 
 ```text
 ┌──────────────────────────────────────┐
-│ CRD Autotune                   ● ON  │
+│ Remotune                   ● ON  │
 │ ● CRD Connected                     │
 ├──────────────────────────────────────┤
 │ Automatic tuning                    │
@@ -523,7 +647,7 @@ This is conceptual, not a pixel-perfect specification.
 
 ---
 
-# 16. UI State Must Be Honest
+# 17. UI State Must Be Honest
 
 CRD connection state and tuning state are different concepts.
 
@@ -561,12 +685,12 @@ Tuning
 
 ---
 
-# 17. Tray Menu Direction
+# 18. Tray Menu Direction
 
 Candidate tray menu:
 
 ```text
-CRD Autotune
+Remotune
 ────────────────────────
 ● CRD Connected
 ✓ Automatic tuning active
@@ -582,7 +706,7 @@ The tray should show useful status without requiring the main window.
 
 ---
 
-# 18. Close vs Quit
+# 19. Close vs Quit
 
 Closing the main window should normally mean:
 
@@ -598,11 +722,11 @@ Terminate application
 
 Explicit `Quit` from the tray means the user wants background automation to stop.
 
-Before quitting, CRD Autotune should restore any settings that it currently owns.
+Before quitting, Remotune should restore any settings that it currently owns.
 
 ---
 
-# 19. Framework
+# 20. Framework
 
 Approved stack:
 
@@ -614,7 +738,7 @@ Vue
 
 ---
 
-# 20. Why Wails
+# 21. Why Wails
 
 Wails is appropriate because:
 
@@ -627,7 +751,7 @@ Wails is appropriate because:
 
 ---
 
-# 21. Why Wails v3
+# 22. Why Wails v3
 
 Wails v3 is selected over Wails v2 for this new project because the product strongly benefits from:
 
@@ -646,19 +770,19 @@ Implementation requirements:
 
 ---
 
-# 22. Distribution
+# 23. Distribution
 
 Desired primary distribution:
 
 ```text
-CRDAutotune.exe
+Remotune.exe
 ```
 
 The goal is a portable utility that can be downloaded and run without a traditional installer for the basic use case.
 
 ---
 
-# 23. WebView2 Dependency
+# 24. WebView2 Dependency
 
 Wails on Windows uses WebView2.
 
@@ -682,7 +806,7 @@ The application should:
 
 ---
 
-# 24. Portable Autostart Caveat
+# 25. Portable Autostart Caveat
 
 If the user enables:
 
@@ -698,7 +822,7 @@ The app should handle or document this gracefully.
 
 ---
 
-# 25. CRD Connection Detection
+# 26. CRD Connection Detection
 
 Reliable connection detection is the most important technical component.
 
@@ -706,7 +830,7 @@ If detection is unreliable, automation is unreliable.
 
 ---
 
-# 26. Do Not Use Process Presence as Source of Truth
+# 27. Do Not Use Process Presence as Source of Truth
 
 Do not infer active connection solely from:
 
@@ -728,7 +852,7 @@ Process state can be diagnostic information only.
 
 ---
 
-# 27. Do Not Use Network Heuristics as Primary Detection
+# 28. Do Not Use Network Heuristics as Primary Detection
 
 Do not primarily infer connection from:
 
@@ -741,7 +865,7 @@ These are weaker signals than actual CRD host connection events.
 
 ---
 
-# 28. Chosen Detection Direction — Windows Event Log
+# 29. Chosen Detection Direction — Windows Event Log
 
 Chromium/Chrome Remote Desktop emits host-status information to Windows Event Log.
 
@@ -756,7 +880,7 @@ The implementation should use Windows Event Log as the primary source of truth.
 
 ---
 
-# 29. Important Verification Requirement
+# 30. Important Verification Requirement
 
 The project must verify the actual CRD Event Log data on a real target machine before hard-coding:
 
@@ -774,7 +898,7 @@ It does not remove the need to inspect the currently installed CRD version.
 
 ---
 
-# 30. Event Log APIs
+# 31. Event Log APIs
 
 Use native Windows Event Log APIs.
 
@@ -803,13 +927,13 @@ Purpose:
 
 ---
 
-# 31. Critical Startup Edge Case
+# 32. Critical Startup Edge Case
 
 Example:
 
 ```text
 13:00 CRD connects
-13:05 CRD Autotune starts
+13:05 Remotune starts
 ```
 
 If the app only subscribes to future events, it misses the 13:00 connection.
@@ -827,7 +951,7 @@ This is a core requirement.
 
 ---
 
-# 32. CRD Detector Responsibilities
+# 33. CRD Detector Responsibilities
 
 Suggested responsibilities:
 
@@ -848,7 +972,7 @@ It only reports session state.
 
 ---
 
-# 33. Event Edge Cases
+# 34. Event Edge Cases
 
 Handle:
 
@@ -867,7 +991,7 @@ Handle:
 
 ---
 
-# 34. Multiple Client Sessions
+# 35. Multiple Client Sessions
 
 Do not assume:
 
@@ -883,7 +1007,7 @@ If CRD guarantees one controlling client in the actual use case, implementation 
 
 ---
 
-# 35. Windows Visual Effects Automation
+# 36. Windows Visual Effects Automation
 
 The product requirement is specifically:
 
@@ -894,11 +1018,11 @@ CRD Connected
 
 The user-facing Windows control already exists.
 
-CRD Autotune must automate it.
+Remotune must automate it.
 
 ---
 
-# 36. Important Implementation Boundary
+# 37. Important Implementation Boundary
 
 The implementer may need to interact with multiple underlying Windows settings because `Best Performance` represents a collection of Visual Effects.
 
@@ -907,7 +1031,7 @@ That internal complexity is acceptable.
 The following is not acceptable:
 
 ```text
-CRD Autotune UI
+Remotune UI
 → expose all those individual settings to the user
 ```
 
@@ -925,9 +1049,9 @@ Rejected
 
 ---
 
-# 37. Visual Effects Snapshot Requirement
+# 38. Visual Effects Snapshot Requirement
 
-Before applying Best Performance, CRD Autotune must capture enough of the current Visual Effects state to restore it exactly.
+Before applying Best Performance, Remotune must capture enough of the current Visual Effects state to restore it exactly.
 
 Possible baseline states include:
 
@@ -946,11 +1070,11 @@ Implementation research must determine the reliable Windows representation of al
 
 The recovery requirement is:
 
-> **After CRD disconnects, the relevant Visual Effects state must match what existed before CRD Autotune changed it.**
+> **After CRD disconnects, the relevant Visual Effects state must match what existed before Remotune changed it.**
 
 ---
 
-# 38. Do Not Fake Restore
+# 39. Do Not Fake Restore
 
 Bad approach:
 
@@ -986,7 +1110,7 @@ Correct implementation must preserve the actual affected state.
 
 ---
 
-# 39. Implementation Research for Best Performance
+# 40. Implementation Research for Best Performance
 
 A technical spike must verify how current Windows versions represent and apply the Visual Effects preset.
 
@@ -1012,7 +1136,7 @@ If registry-backed state is necessary for exact preset behavior, isolate it behi
 
 ---
 
-# 40. Taskbar Auto-Hide Automation
+# 41. Taskbar Auto-Hide Automation
 
 Approved behavior:
 
@@ -1029,7 +1153,7 @@ After disconnect:
 
 ---
 
-# 41. Taskbar API Direction
+# 42. Taskbar API Direction
 
 Windows Shell exposes taskbar/appbar state through:
 
@@ -1048,7 +1172,7 @@ The implementation should use the Shell API where practical rather than restarti
 
 ---
 
-# 42. Taskbar State Preservation
+# 43. Taskbar State Preservation
 
 If the taskbar is already not auto-hidden before CRD:
 
@@ -1066,13 +1190,13 @@ Connected: Auto-hide OFF
 Disconnected: Auto-hide ON
 ```
 
-CRD Autotune never assumes the baseline.
+Remotune never assumes the baseline.
 
 It reads it.
 
 ---
 
-# 43. Snapshot and Restore
+# 44. Snapshot and Restore
 
 Snapshot/restore is the primary safety mechanism.
 
@@ -1096,9 +1220,9 @@ The exact Visual Effects representation is implementation-dependent and must be 
 
 ---
 
-# 44. Ownership Rule
+# 45. Ownership Rule
 
-CRD Autotune must know whether an override belongs to it.
+Remotune must know whether an override belongs to it.
 
 Key rule:
 
@@ -1111,7 +1235,7 @@ If the app sees Windows in Best Performance but has no ownership record, it cann
 
 ---
 
-# 45. Baseline Must Not Be Overwritten
+# 46. Baseline Must Not Be Overwritten
 
 Critical bug to avoid:
 
@@ -1137,12 +1261,12 @@ else:
 
 ---
 
-# 46. Persistence
+# 47. Persistence
 
 Candidate storage location:
 
 ```text
-%LOCALAPPDATA%\CRDAutotune\
+%LOCALAPPDATA%\Remotune\
 ```
 
 Candidate files:
@@ -1159,7 +1283,7 @@ The active recovery snapshot must be durable.
 
 ---
 
-# 47. Apply Transaction
+# 48. Apply Transaction
 
 Applying remote tuning should be transaction-like.
 
@@ -1185,7 +1309,7 @@ If part of the operation fails:
 
 ---
 
-# 48. Restore Transaction
+# 49. Restore Transaction
 
 Conceptual flow:
 
@@ -1204,7 +1328,7 @@ Never delete the only recovery data before successful restore.
 
 ---
 
-# 49. Crash Recovery
+# 50. Crash Recovery
 
 Crash recovery is mandatory.
 
@@ -1215,9 +1339,9 @@ CRD connected
 → snapshot saved
 → Best Performance applied
 → taskbar auto-hide disabled
-→ CRD Autotune crashes
+→ Remotune crashes
 → CRD later disconnects
-→ CRD Autotune starts again
+→ Remotune starts again
 ```
 
 On restart:
@@ -1238,7 +1362,7 @@ The app must not strand Windows in its temporary remote state.
 
 ---
 
-# 50. State Coordinator
+# 51. State Coordinator
 
 A single coordinator should own transitions.
 
@@ -1253,7 +1377,7 @@ All commands go through one state coordinator.
 
 ---
 
-# 51. Core State Machine
+# 52. Core State Machine
 
 Conceptual:
 
@@ -1285,7 +1409,7 @@ RECOVERY_REQUIRED
 
 ---
 
-# 52. Desired-State Model
+# 53. Desired-State Model
 
 The coordinator should derive desired state from:
 
@@ -1315,7 +1439,7 @@ with no broader lifecycle model.
 
 ---
 
-# 53. Race Conditions
+# 54. Race Conditions
 
 Example:
 
@@ -1336,7 +1460,7 @@ Recommended:
 
 ---
 
-# 54. Idempotency
+# 55. Idempotency
 
 Operations should be safe when repeated.
 
@@ -1354,7 +1478,7 @@ Duplicate events should not create duplicate ownership cycles.
 
 ---
 
-# 55. Explicit Quit
+# 56. Explicit Quit
 
 Recommended behavior:
 
@@ -1369,7 +1493,7 @@ User clicks Quit
 
 ---
 
-# 56. Pause Automation
+# 57. Pause Automation
 
 Recommended semantics:
 
@@ -1385,7 +1509,7 @@ The app should not remain silently in a temporary Best Performance override afte
 
 ---
 
-# 57. Restore Now
+# 58. Restore Now
 
 `Restore Now` is a safety/recovery command.
 
@@ -1397,15 +1521,15 @@ If valid owned snapshot exists
 
 If no owned snapshot exists
 → do not guess
-→ report that no restorable CRD Autotune snapshot exists
+→ report that no restorable Remotune snapshot exists
 ```
 
 ---
 
-# 58. Suggested Backend Architecture
+# 59. Suggested Backend Architecture
 
 ```text
-CRD Autotune
+Remotune
 │
 ├── application
 │   └── StateCoordinator
@@ -1441,7 +1565,7 @@ The separation of responsibilities should remain.
 
 ---
 
-# 59. VisualEffectsManager Responsibility
+# 60. VisualEffectsManager Responsibility
 
 `VisualEffectsManager` should expose product-level operations such as:
 
@@ -1458,7 +1582,7 @@ Internal implementation may be more detailed.
 
 ---
 
-# 60. TaskbarManager Responsibility
+# 61. TaskbarManager Responsibility
 
 Product-level operations:
 
@@ -1471,7 +1595,7 @@ It should preserve unrelated taskbar state.
 
 ---
 
-# 61. CRD Detector Abstraction
+# 62. CRD Detector Abstraction
 
 Architecture may use a general internal interface:
 
@@ -1490,7 +1614,7 @@ Do not turn this abstraction into a multi-provider feature now.
 
 ---
 
-# 62. Future Remote Providers
+# 63. Future Remote Providers
 
 Potential future expansion:
 
@@ -1508,7 +1632,7 @@ Do not implement unless explicitly requested.
 
 ---
 
-# 63. Wails Responsibilities
+# 64. Wails Responsibilities
 
 Wails should own:
 
@@ -1522,7 +1646,7 @@ Wails should not own Windows tuning logic.
 
 ---
 
-# 64. Vue Responsibilities
+# 65. Vue Responsibilities
 
 Vue should render authoritative backend state.
 
@@ -1543,7 +1667,7 @@ User clicks toggle
 
 ---
 
-# 65. Start with Windows
+# 66. Start with Windows
 
 The app should support:
 
@@ -1551,13 +1675,13 @@ The app should support:
 Start with Windows
 ```
 
-This is important because automatic detection is only useful if CRD Autotune is already running when the session begins.
+This is important because automatic detection is only useful if Remotune is already running when the session begins.
 
 Wails v3 autostart functionality is a suitable implementation direction.
 
 ---
 
-# 66. Startup Sequence
+# 67. Startup Sequence
 
 Recommended conceptual startup:
 
@@ -1578,7 +1702,7 @@ Recovery logic must not depend on the main window being visible.
 
 ---
 
-# 67. Shutdown Sequence
+# 68. Shutdown Sequence
 
 Recommended:
 
@@ -1595,7 +1719,7 @@ Recommended:
 
 ---
 
-# 68. Diagnostics
+# 69. Diagnostics
 
 The app should expose enough information to troubleshoot automation without becoming a dashboard.
 
@@ -1618,7 +1742,7 @@ Application version
 
 ---
 
-# 69. Logging
+# 70. Logging
 
 Recommended log levels:
 
@@ -1644,7 +1768,7 @@ INFO  Previous Windows state restored
 
 ---
 
-# 70. Privacy
+# 71. Privacy
 
 CRD Event Log entries may include identifying client information.
 
@@ -1658,7 +1782,7 @@ Therefore:
 
 ---
 
-# 71. Privilege Model
+# 72. Privilege Model
 
 Normal operation should preferably not require the entire app to run as Administrator.
 
@@ -1675,7 +1799,7 @@ Do not simply run the whole utility elevated by default.
 
 ---
 
-# 72. Multi-Monitor Considerations
+# 73. Multi-Monitor Considerations
 
 Test:
 
@@ -1692,7 +1816,7 @@ Do not invent per-monitor features unless the OS and product need justify them.
 
 ---
 
-# 73. Explorer Restart
+# 74. Explorer Restart
 
 Test Explorer restart during:
 
@@ -1708,7 +1832,7 @@ If Explorer restart changes how Shell state must be reapplied, handle that throu
 
 ---
 
-# 74. Visual Effects Limitation
+# 75. Visual Effects Limitation
 
 `Best Performance` affects Windows visual behavior.
 
@@ -1718,15 +1842,15 @@ Applications can render custom animations independently.
 
 Product claims should remain accurate:
 
-> CRD Autotune switches Windows Visual Effects to Best Performance during CRD.
+> Remotune switches Windows Visual Effects to Best Performance during CRD.
 
 Do not claim:
 
-> CRD Autotune disables every animation in every app.
+> Remotune disables every animation in every app.
 
 ---
 
-# 75. Performance Requirements
+# 76. Performance Requirements
 
 The utility should be lightweight.
 
@@ -1741,7 +1865,7 @@ Goals:
 
 ---
 
-# 76. Reliability Priority
+# 77. Reliability Priority
 
 Priority order:
 
@@ -1758,7 +1882,7 @@ Priority order:
 
 ---
 
-# 77. Technical Spike — Mandatory Before Full UI Work
+# 78. Technical Spike — Mandatory Before Full UI Work
 
 Before building the polished Vue UI, verify the Windows behavior on the actual Controlled machine.
 
@@ -1803,7 +1927,7 @@ Do not build the final visual interface before these fundamentals are proven.
 
 ---
 
-# 78. Implementation Roadmap
+# 79. Implementation Roadmap
 
 The project does not need an artificial throwaway MVP.
 
@@ -1888,7 +2012,7 @@ Test:
 
 ---
 
-# 79. Critical Test Scenarios
+# 80. Critical Test Scenarios
 
 ## Scenario A — Normal Flow
 
@@ -1905,7 +2029,7 @@ Baseline
 
 ```text
 CRD connected
-→ start CRD Autotune
+→ start Remotune
 → reconstruct connected state
 → apply tuning
 ```
@@ -1974,7 +2098,7 @@ Owned Windows state is restored before exit.
 
 ---
 
-# 80. Acceptance Criteria
+# 81. Acceptance Criteria
 
 ## CRD Detection
 
@@ -1990,7 +2114,7 @@ Owned Windows state is restored before exit.
 - [ ] Captures enough prior Visual Effects state to restore exactly.
 - [ ] Restores a prior `Custom` configuration correctly.
 - [ ] Duplicate connections cannot overwrite baseline.
-- [ ] No Visual Effects editor is exposed in CRD Autotune UI.
+- [ ] No Visual Effects editor is exposed in Remotune UI.
 
 ## Taskbar
 
@@ -2024,7 +2148,7 @@ Owned Windows state is restored before exit.
 
 ---
 
-# 81. Future Scope
+# 82. Future Scope
 
 Future scope must respect the product boundary.
 
@@ -2054,19 +2178,19 @@ These are outside the intended product identity.
 
 ---
 
-# 82. Final Product Positioning
+# 83. Final Product Positioning
 
 Candidate product definition:
 
-> **CRD Autotune is a lightweight Windows tray utility that automatically switches Windows Visual Effects to Best Performance and disables taskbar auto-hide while a Chrome Remote Desktop session is active, then restores the user's previous Windows state when the session ends.**
+> **Remotune is a lightweight Windows tray utility that automatically switches Windows Visual Effects to Best Performance and disables taskbar auto-hide while a Chrome Remote Desktop session is active, then restores the user's previous Windows state when the session ends.**
 
 ---
 
-# 83. Key Decisions — Approved
+# 84. Key Decisions — Approved
 
 The following decisions are approved:
 
-1. Project name is `CRD Autotune`.
+1. Official product brand is `Remotune`; previous working codename was `CRD Autotune`.
 2. The app runs on the Controlled machine.
 3. Current setup:
    - Controlling machine = work machine.
@@ -2082,7 +2206,7 @@ The following decisions are approved:
 8. `Best Performance` refers to Windows `Performance Options > Visual Effects > Adjust for best performance`.
 9. Do not automatically force `Best Appearance` on disconnect.
 10. Snapshot/restore is mandatory.
-11. Do not recreate Performance Options in CRD Autotune.
+11. Do not recreate Performance Options in Remotune.
 12. Do not expose Windows Visual Effects checkbox lists.
 13. Do not implement Minimal/Recommended/Aggressive/Custom tuning profiles.
 14. Product form is tray-first utility.
@@ -2102,7 +2226,7 @@ The following decisions are approved:
 
 ---
 
-# 84. Research Items — Verify Before Hard-Coding
+# 85. Research Items — Verify Before Hard-Coding
 
 ## CRD
 
@@ -2143,7 +2267,7 @@ The following decisions are approved:
 
 ---
 
-# 85. Technical References
+# 86. Technical References
 
 ## Chromium / Chrome Remote Desktop
 
@@ -2225,7 +2349,7 @@ https://v3.wails.io/quick-start/installation/
 
 ---
 
-# 86. Final Architecture Summary
+# 87. Final Architecture Summary
 
 ```text
 Chrome Remote Desktop
@@ -2263,7 +2387,7 @@ Recovery Store   VisualEffectsManager TaskbarManager
 
 ---
 
-# 87. Final Runtime Summary
+# 88. Final Runtime Summary
 
 ```text
 CRD DISCONNECTED
@@ -2291,7 +2415,7 @@ User's original Windows state
 
 ---
 
-# 88. Final Engineering Principle
+# 89. Final Engineering Principle
 
 When choosing between more features and more reliability, choose reliability.
 
@@ -2299,8 +2423,8 @@ When choosing between recreating a Windows setting and automating the Windows se
 
 The core invariant is:
 
-> **Every CRD Autotune-owned change must have a durable, reliable path back to the exact user state that existed before CRD Autotune changed it.**
+> **Every Remotune-owned change must have a durable, reliable path back to the exact user state that existed before Remotune changed it.**
 
 And the product boundary is:
 
-> **CRD Autotune automates remote-session transitions. Windows remains the source of truth for Windows Visual Effects configuration.**
+> **Remotune automates remote-session transitions. Windows remains the source of truth for Windows Visual Effects configuration.**
