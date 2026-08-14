@@ -490,3 +490,22 @@ Log levels: `INFO`, `WARN`, `ERROR`, `DEBUG`. Log meaningful transitions rather 
 ## Future architecture boundary
 
 Adding a detector such as `RDPDetector`, `RustDeskDetector`, or `AnyDeskDetector` is valid future scope only when explicitly requested. It extends the remote-session trigger. It does not justify new Windows tuning profiles or a replacement control panel.
+
+## Build environment
+
+**[IMPLEMENTED]** Docker-only build policy. All compilation, code generation, verification, and testing execute inside Docker containers. The Windows host provides only editor, Git, and Docker/Rancher Desktop.
+
+```text
+Dockerfile          → golang:1.26.1-bookworm, Bun 1.2.17, CGO_ENABLED=0
+docker-compose.yml  → verify | build | shell services
+scripts/            → verify.ps1, build-windows.ps1, shell.ps1 (delegates to Docker)
+```
+
+Key design choices:
+
+- **No mingw-w64**: Wails v3 Windows builds are CGO-free via `go-winloader`.
+- **No Wails CLI yet**: deferred to Phase 5 (requires GTK dev libs for Linux compilation; binding generation is only needed once a Vue frontend exists).
+- **Caches in named volumes**: Go module and build caches persist across runs without polluting the host.
+- **Cross-compile verification**: `go vet` and `go build` run with `GOOS=windows`; `go test -c` compile-checks all test code; platform-independent tests execute on Linux.
+
+Full runbook: [docs/runbook/docker-build-environment.md](../runbook/docker-build-environment.md).

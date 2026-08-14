@@ -1,0 +1,8 @@
+# Exclude build output, editor state, and host caches from Docker context.
+out/
+.git/
+.kiro/
+engine/
+tools/
+docs/
+*.exe

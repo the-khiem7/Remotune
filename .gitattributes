@@ -1,0 +1,15 @@
+# Normalize line endings for source files.
+# Go, Vue, JS, and config files use LF universally.
+*.go text eol=lf
+*.vue text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf

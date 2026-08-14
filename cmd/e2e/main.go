@@ -104,7 +104,7 @@ func main() {
 	}
 
 	fmt.Println("e2e: PASS — full apply/restore cycle through real adapters, exact state recovery confirmed")
-	fmt.Printf("e2e: recovery store at: %s (should be empty)\n", store.Exists())
+	fmt.Printf("e2e: recovery store at: %v (should be empty)\n", store.Exists())
 }
 
 func assertStatus(c *application.Coordinator, want application.TuningState, ctx string) {

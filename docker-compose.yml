@@ -1,0 +1,68 @@
+# Remotune Docker Compose — build environment services.
+# All project toolchains run exclusively inside these containers.
+# The Windows host provides only: editor, Git, Docker, docker compose.
+
+services:
+  # verify: format, lint, static analysis, compile check, platform-independent tests.
+  # Windows-only tests cannot execute on Linux; they are compile-checked instead.
+  verify:
+    build: .
+    volumes:
+      - .:/src
+      - go-mod:/go/pkg/mod
+      - go-build:/root/.cache/go-build
+    working_dir: /src
+    environment:
+      - CGO_ENABLED=0
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        echo "=== go fmt ===" &&
+        UNFMT=$(gofmt -l . | grep -v '^engine/' || true) &&
+        if [ -n "$UNFMT" ]; then echo "$UNFMT"; echo "FAIL: files need gofmt"; exit 1; fi &&
+        echo "=== go vet (GOOS=windows) ===" &&
+        GOOS=windows GOARCH=amd64 go vet ./... &&
+        echo "=== go build compile check (GOOS=windows) ===" &&
+        GOOS=windows GOARCH=amd64 go build ./... &&
+        echo "=== go test compile check (GOOS=windows) ===" &&
+        GOOS=windows GOARCH=amd64 go test -c -o /dev/null ./internal/application &&
+        GOOS=windows GOARCH=amd64 go test -c -o /dev/null ./internal/crd &&
+        GOOS=windows GOARCH=amd64 go test -c -o /dev/null ./internal/wintune &&
+        echo "=== go test run (platform-independent only) ===" &&
+        GOOS=linux GOARCH=amd64 go test ./internal/application -run . -count=1 -short &&
+        echo "=== PASS ==="
+
+  # build: produce the Windows executable.
+  build:
+    build: .
+    volumes:
+      - .:/src
+      - go-mod:/go/pkg/mod
+      - go-build:/root/.cache/go-build
+      - ./out:/src/out
+    working_dir: /src
+    environment:
+      - GOOS=windows
+      - GOARCH=amd64
+      - CGO_ENABLED=0
+    command: ["go", "build", "-trimpath", "-ldflags=-s -w", "-o", "out/Remotune.exe", "."]
+
+  # shell: interactive diagnostic shell with the full toolchain.
+  shell:
+    build: .
+    volumes:
+      - .:/src
+      - go-mod:/go/pkg/mod
+      - go-build:/root/.cache/go-build
+    working_dir: /src
+    environment:
+      - GOOS=windows
+      - GOARCH=amd64
+      - CGO_ENABLED=0
+    entrypoint: ["bash"]
+    stdin_open: true
+    tty: true
+
+volumes:
+  go-mod:
+  go-build:
