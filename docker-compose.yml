@@ -32,7 +32,7 @@ services:
         GOOS=linux GOARCH=amd64 go test ./internal/application -run . -count=1 -short &&
         echo "=== PASS ==="
 
-  # build: produce the Windows executable.
+  # build: produce the versioned Windows executable.
   build:
     build: .
     volumes:
@@ -45,7 +45,14 @@ services:
       - GOOS=windows
       - GOARCH=amd64
       - CGO_ENABLED=0
-    command: ["go", "build", "-trimpath", "-ldflags=-s -w", "-o", "out/Remotune.exe", "."]
+      - BUILD_VERSION=${BUILD_VERSION:-0.1.0}
+      - ARTIFACT_NAME=${ARTIFACT_NAME:-remotune-v0.1.0.exe}
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        go build -trimpath \
+          -ldflags="-s -w -H windowsgui -X main.version=$${BUILD_VERSION}" \
+          -o "out/$${ARTIFACT_NAME}" .
 
   # shell: interactive diagnostic shell with the full toolchain.
   shell:

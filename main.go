@@ -11,6 +11,9 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
+// version is set at build time via -ldflags "-X main.version=..."
+var version = "dev"
+
 func main() {
 	// Detect WebView2 before starting Wails — fail clearly if absent.
 	if err := lifecycle.CheckWebView2(); err != nil {
@@ -34,7 +37,12 @@ func main() {
 	tray := app.SystemTray.New()
 	menu := buildTrayMenu(app, svc)
 	tray.SetMenu(menu)
-	tray.SetTooltip("Remotune")
+	tray.SetTooltip("Remotune v" + version)
+
+	// Left-click on tray icon opens the same menu (no window until Phase 5).
+	tray.OnClick(func() {
+		tray.OpenMenu()
+	})
 
 	// Start the coordinator loop in background once the app is running.
 	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(event *application.ApplicationEvent) {
