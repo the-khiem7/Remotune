@@ -4,7 +4,7 @@ pack: "remotune"
 document: "introduction"
 status: "active"
 updated: "2026-08-14"
-code_ref: "7dbec692540aa13e0347b3deedc4cdb21a168eb8"
+code_ref: "5185cbc2825df1e38fe0823625c00acdce52b480"
 ---
 
 # Remotune Baseline Introduction
@@ -41,7 +41,7 @@ A **[VERIFIED]** fact is only as broad as the configuration it was observed on. 
 
 - **Phase 1**, the Windows adapter layer (`VisualEffectsManager`, `TaskbarManager`): a three-layer Visual Effects snapshot, a transformation-based apply, and a bounded convergence loop that re-verifies the observed outcome instead of trusting a write. Verified on the real Controlled machine, five consecutive clean runs.
 - **Phase 2**, the CRD detector (`Bootstrap`, `Reconstruct`, `Subscribe`): PID-scoped active-client reconstruction and a gap-free bookmark handover from historical query to live subscription. Verified against the real Event Log, including one live operator disconnect/reconnect cycle that found and fixed a real `EvtSubscribe` signaling defect.
-- **Phase 3**, the `Coordinator` and durable `RecoveryStore`: one mutex-serialized transition loop implementing the exact apply/restore transaction flows, atomic snapshot persistence, and the full `Unknown`/`Baseline`/`Applying`/`Active`/`Restoring`/`Partial-Error`/`Recovery Required` state machine. Verified against fake adapters (29 tests, 8 consecutive clean runs); **not yet run end-to-end against the real Phase 1/2 adapters.**
+- **Phase 3**, the `Coordinator` and durable `RecoveryStore`: one mutex-serialized transition loop implementing the exact apply/restore transaction flows, atomic snapshot persistence, and the full `Unknown`/`Baseline`/`Applying`/`Active`/`Restoring`/`Partial-Error`/`Recovery Required` state machine. Verified against fake adapters (29 tests, 8 consecutive clean runs), **and** verified end-to-end against the real Phase 1/2 adapters on 2026-08-14: a full simulated CRD Connected → apply → CRD Disconnected → restore cycle through `wintune.VisualEffectsManager` and `wintune.TaskbarManager` recovered the operator's exact original state with no differences, 3 consecutive clean runs.
 
 Full detail is in the [roadmap](remotune.roadmap.md#phase-1--windows-tuning-engine). The module is deliberately kept separate from Wails so it can be migrated by file move plus import-path rewrite once Phase 4 generates the canonical Wails project (decision 52 in the [ledger](remotune.hallucination.md#decisions-closed-by-phase-0-evidence)).
 

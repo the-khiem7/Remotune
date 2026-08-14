@@ -4,7 +4,7 @@ pack: "remotune"
 document: "hallucination"
 status: "active"
 updated: "2026-08-14"
-code_ref: "7dbec692540aa13e0347b3deedc4cdb21a168eb8"
+code_ref: "5185cbc2825df1e38fe0823625c00acdce52b480"
 ---
 
 # Remotune Decision and Uncertainty Ledger
@@ -244,7 +244,7 @@ These links are source references, not recorded Phase 0 verification.
 
 ## Phase 3 evidence and decisions
 
-70. **[VERIFIED]** The StateCoordinator is implemented in `engine/internal/application`, same standalone module as Phases 1 and 2, verified by 29 tests passing across 8 consecutive runs. It has not yet been run end-to-end against the real `wintune`/`crd` adapters; tests use fakes satisfying locally-declared `VisualEffectsAdapter`/`TaskbarAdapter`/`Bootstrapper`/`Subscription` interfaces. See [Phase 3 recorded evidence](remotune.roadmap.md#phase-3-recorded-evidence).
+70. **[VERIFIED]** The StateCoordinator is implemented in `engine/internal/application`, same standalone module as Phases 1 and 2, verified by 29 tests passing across 8 consecutive runs, **and** verified end-to-end against the real adapters on 2026-08-14 (`cmd/e2e`: 3 consecutive clean runs of a full simulated CRD Connected → apply → Disconnected → restore cycle, exact state recovery confirmed). See [Phase 3 recorded evidence](remotune.roadmap.md#phase-3-recorded-evidence).
 71. **[DECIDED]** Race handling for the coordinator is one `sync.Mutex` around every exported method, not a separate command queue. A call arriving while another is in flight blocks until it finishes, then reconciles against whatever is now current, which satisfies "the latest desired state eventually wins after serialized reconciliation" by construction rather than by explicit queue management.
 72. **[DECIDED]** A restore that verifies successfully on Windows but whose durable-recovery-file cleanup (`RecoveryStore.Retire`) fails is reported as `Recovery Required`, a distinct outcome from `Partial/Error`. `Partial/Error` means Windows itself is not fully in the desired state; this case means Windows **is** correctly restored and only the durable record of that could not be deleted. Conflating them would incorrectly tell an operator that Windows needs attention when it does not.
 73. **[DECIDED]** `Pause` always records `Paused = true`, even when the restore it triggers is itself partial. Pausing is a deliberate operator command and must be honored as having happened; the triggered restore's own failure remains independently visible through the tuning state.

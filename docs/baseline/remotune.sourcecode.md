@@ -4,7 +4,7 @@ pack: "remotune"
 document: "sourcecode"
 status: "active"
 updated: "2026-08-14"
-code_ref: "7dbec692540aa13e0347b3deedc4cdb21a168eb8"
+code_ref: "5185cbc2825df1e38fe0823625c00acdce52b480"
 ---
 
 # Remotune Planned Source Architecture
@@ -316,7 +316,7 @@ observed CRD state
 
 **[VERIFIED]** `VisualEffectsAdapter`, `TaskbarAdapter`, `Bootstrapper`, and `Subscription` are declared as coordinator-local interfaces satisfied by the real `wintune`/`crd` types, rather than the coordinator depending on those concrete types. This is what let 29 coordinator tests run fast and repeatably against fakes without mutating the operator's real desktop on every run, extending the same lesson Phase 1 learned about needing non-mutating test cycles.
 
-**[UNVERIFIED]** The coordinator has not yet been run end-to-end against the real `wintune`/`crd` adapters; each adapter is independently proven on real hardware (Phase 1/2), and the coordinator's decision logic is proven against fakes (Phase 3), but the full chain together is not yet exercised.
+**[VERIFIED]** The coordinator has been run end-to-end against the real `wintune`/`crd` adapters on 2026-08-14 (`cmd/e2e`): a full simulated CRD Connected → apply → CRD Disconnected → restore cycle recovered the operator's exact original state with no differences, 3 consecutive clean runs. Each adapter is also independently proven on real hardware (Phase 1/2), and the coordinator's decision logic is independently proven against fakes (Phase 3, 29 tests).
 
 ## State model
 

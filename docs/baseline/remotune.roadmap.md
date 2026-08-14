@@ -4,14 +4,14 @@ pack: "remotune"
 document: "roadmap"
 status: "active"
 updated: "2026-08-14"
-code_ref: "7dbec692540aa13e0347b3deedc4cdb21a168eb8"
+code_ref: "5185cbc2825df1e38fe0823625c00acdce52b480"
 ---
 
 # Remotune Implementation Roadmap
 
 ## Current checkpoint
 
-**[DECIDED]** Product direction is approved. **[IMPLEMENTED]** Phase 1 (Windows tuning adapters), Phase 2 (CRD detector), and Phase 3 (StateCoordinator and durable recovery) all exist in the standalone `engine/` Go module. Phase 1 and 2 are verified against real Windows state and a real, live CRD session respectively; Phase 3 is verified against fakes with 29 passing tests but not yet end-to-end against the real adapters. **[PLANNED]** The Wails shell (Phase 4) does not exist yet. The repository also contains documentation and the Phase 0 evidence tooling under `tools/phase0/`.
+**[DECIDED]** Product direction is approved. **[IMPLEMENTED]** Phase 1 (Windows tuning adapters), Phase 2 (CRD detector), and Phase 3 (StateCoordinator and durable recovery) all exist in the standalone `engine/` Go module, each verified against real Windows state and/or a real, live CRD session. **[PLANNED]** The Wails shell (Phase 4) does not exist yet. The repository also contains documentation and the Phase 0 evidence tooling under `tools/phase0/`.
 
 **[VERIFIED]** A Phase 0 evidence spike was executed on 2026-08-14 on the actual Controlled machine and is now substantially complete. All four areas are closed with reproducible live evidence recorded in [Phase 0 recorded evidence](#phase-0-recorded-evidence), including the exact 22-value set that `Adjust for best performance` changes and a passing arbitrary-`Custom` round-trip. Remaining gaps are environment coverage only: Windows 10, multi-monitor and secondary taskbars, Explorer-restart reconciliation, and the Wails runtime APIs that require the pinned project to exist.
 
@@ -532,7 +532,7 @@ Gate coverage, by baseline requirement:
 
 **[VERIFIED]** Operator machine confirmed untouched after the full suite: `VisualFXSetting=1`, mask `9E 3E 07 80 12 00 00 00`, taskbar live/persisted both `true`/agreed, and `%LOCALAPPDATA%\Remotune\` does not exist — every test used an isolated `t.TempDir()`, never the real recovery path.
 
-**[UNVERIFIED]**, deferred: this phase has not been exercised against the *real* `wintune`/`crd` adapters end-to-end (only against fakes, plus each adapter's own Phase 1/2 real-machine tests independently). A real end-to-end run — actual CRD connect/disconnect driving actual Visual Effects/taskbar apply/restore through the coordinator — belongs to Phase 4/6 once a long-running process exists to host it.
+**[VERIFIED]** End-to-end with real adapters: on 2026-08-14, `cmd/e2e` ran the coordinator against the real `wintune.VisualEffectsManager` and `wintune.TaskbarManager` through a full simulated CRD Connected → apply → CRD Disconnected → restore cycle, 3 consecutive clean runs. The operator's exact original state was recovered with no differences, and the recovery store was correctly retired afterward. The `[UNVERIFIED]` gap from the initial Phase 3 documentation is now closed.
 
 ## Phase 4 — Wails tray shell
 
@@ -669,17 +669,16 @@ Closing the window leaves automation running; explicit Quit restores owned Windo
 
 ## Exact next action
 
-Phases 1, 2, and 3 are all implemented in the standalone `engine/` Go module with no Wails dependency. Phase 3 is verified against fakes (29 tests, 8 consecutive clean runs) but not yet against the real adapters end-to-end.
+Phases 1, 2, and 3 are all implemented, tested, and verified end-to-end against the real adapters (3 consecutive clean runs of `cmd/e2e` recovered the operator's exact state with no differences). The standalone `engine/` Go module is complete for Phase 4 migration.
 
 ```text
-1. close the Phase 3 real-adapter gap: wire engine/internal/application.Coordinator to the
-   REAL wintune.VisualEffectsManager and wintune.TaskbarManager (satisfying the local
-   VisualEffectsAdapter/TaskbarAdapter interfaces already needs no code change on their
-   side) and to crd.LiveDetector, then run at least one real apply/restore cycle end-to-end
-2. wire detector failures (currently Go error returns) into the coordinator's health/diagnostics
-   surface, and add Event Log rotation/clear fallback (both deferred from Phase 2 to Phase 3/6)
-3. only after the real end-to-end run is verified: scaffold the pinned Wails project
-   (v3.0.0-beta.8) and migrate the engine/ packages into it per decision 52
+1. scaffold the pinned Wails project (v3.0.0-beta.8) per decision 52
+2. migrate engine/internal/{wintune,crd,application} + engine/cmd/* into the Wails project
+   as a file move plus import-path rewrite; existing tests must still pass with no adapter
+   importing Wails
+3. wire the Wails application lifecycle (tray, close-to-tray, Quit sequence, Start with Windows)
+   to Coordinator methods (Quit, Pause/Resume) and CRD detector (Run)
+4. handle WebView2 prerequisite, autostart, and moved-portable-path per the Phase 4 deliverables
 ```
 
-Treat `engine/internal/wintune`, `engine/internal/crd`, and `engine/internal/application` as the behavioural reference; the PowerShell tools under `tools/phase0/` are superseded evidence artifacts, not live specifications. Do not claim Windows 10, multi-monitor, secondary-taskbar, or multi-client-CRD support until those configurations are actually observed.
+Do not claim Windows 10, multi-monitor, secondary-taskbar, or multi-client-CRD support until those configurations are actually observed.
