@@ -1,6 +1,10 @@
-# Remotune — Project Proposal & Implementation Source of Truth
+# Remotune — Archived Project Proposal
 
-> **Status:** Approved for implementation handoff  
+> **Archive status:** Superseded and non-authoritative since 2026-08-14  
+> **Active source of truth:** [`docs/baseline/remotune.introduction.md`](../baseline/remotune.introduction.md) and its linked Baseline Docs pack  
+> **Purpose:** Historical provenance only; implementation and resume work must not depend on this file
+
+> **Former status:** Approved for implementation handoff  
 > **Project:** `Remotune`  
 > **Platform:** Windows  
 > **Primary stack:** Wails v3 + Go + Vue  
