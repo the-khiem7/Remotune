@@ -4,14 +4,16 @@ pack: "remotune"
 document: "sourcecode"
 status: "active"
 updated: "2026-08-14"
-code_ref: "5185cbc2825df1e38fe0823625c00acdce52b480"
+code_ref: "uncommitted"
 ---
 
-# Remotune Planned Source Architecture
+# Remotune Source Architecture
 
 ## Implementation status
 
-Everything in this document is **[PLANNED]** unless explicitly marked **[DECIDED]**, **[VERIFIED]**, or **[UNVERIFIED]**. There is still no application source code; the repository contains documentation plus the Phase 0 evidence tooling in `tools/phase0/`. Exact folders and type names may change; responsibility boundaries must remain.
+**[IMPLEMENTED]** Phases 1 through 4. The root Go module `github.com/khiemnguyen/remotune` contains the full application: Wails v3 tray shell, the migrated Phase 1–3 adapters, the coordinator, and the lifecycle package. The standalone `engine/` module is superseded but retained for reference.
+
+**[PLANNED]** Phase 5 (Vue UI) and Phase 6 (hardening). The current UI surface is the system tray context menu only.
 
 **[VERIFIED]** items rest on the live observations recorded in [Phase 0 recorded evidence](remotune.roadmap.md#phase-0-recorded-evidence), collected on Windows 11 Pro 23H2 with CRD host 152.0.7977.9 as a non-elevated user. `tools/phase0/Get-VisualState.ps1` is the working reference for the snapshot shape described under [Persistence](#persistence).
 
@@ -47,28 +49,20 @@ Recovery Store   VisualEffectsManager    TaskbarManager
 ## Responsibility topology
 
 ```text
-Remotune
-├─ application
-│  └─ StateCoordinator
-├─ crd
-│  ├─ Detector
-│  ├─ EventLogReader
-│  ├─ EventSubscriber
-│  ├─ EventParser
-│  └─ StateReconstructor
-├─ windows
-│  ├─ VisualEffectsManager
-│  ├─ TaskbarManager
-│  └─ isolated Win32/platform adapters
-├─ persistence
-│  ├─ ConfigStore
-│  ├─ RecoveryStore
-│  └─ StateStore
-├─ diagnostics
-│  └─ Logger
-└─ ui
-   ├─ Wails lifecycle/tray/bindings
-   └─ Vue frontend
+github.com/khiemnguyen/remotune  (root module, Wails v3.0.0-beta.8)
+├─ main.go, tray.go              (Wails bootstrap, tray menu)
+├─ internal/
+│  ├─ application/               (Phase 3: Coordinator, RecoveryStore, TuningState, startup Run)
+│  ├─ crd/                       (Phase 2: Bootstrap, Reconstruct, Subscribe, event parsing)
+│  ├─ wintune/                   (Phase 1: VisualEffectsManager, TaskbarManager, Snapshot, win32 bindings)
+│  └─ lifecycle/                 (Phase 4: Service, WebView2 check, autostart, portable path)
+├─ cmd/
+│  ├─ crdwatch/                  (operator observation tool)
+│  ├─ e2e/                       (end-to-end verification)
+│  └─ tbset/                     (taskbar state utility)
+├─ engine/                       (superseded standalone module, retained for reference)
+├─ tools/phase0/                 (Phase 0 evidence scripts and snapshots)
+└─ docs/baseline/                (this pack)
 ```
 
 ### CRD detector
@@ -255,7 +249,7 @@ The old objection that `StuckRects3` needs an Explorer restart does not apply: `
 
 ### Persistence
 
-**[IMPLEMENTED]** `engine/internal/application.RecoveryStore`, at `%LOCALAPPDATA%\Remotune\recovery.json` (resolved via `os.UserCacheDir`, overridable for tests). One file, not per-category, because ownership is a single unit: a duplicate connect must not be able to replace one category's baseline while leaving another's stale (ledger decision 14).
+**[IMPLEMENTED]** `internal/application.RecoveryStore`, at `%LOCALAPPDATA%\Remotune\recovery.json` (resolved via `os.UserCacheDir`, overridable for tests). One file, not per-category, because ownership is a single unit: a duplicate connect must not be able to replace one category's baseline while leaving another's stale (ledger decision 14).
 
 **[VERIFIED]** `Save` is atomic: it writes to a temp file in the same directory (guaranteeing a same-volume, and therefore atomic, `os.Rename`) and only renames over the target after the write and an `fsync` succeed. `Load` collapses a missing file, a corrupt (non-JSON) file, and a file with a mismatched `SchemaVersion` into the single `ErrNoRecovery` sentinel, so a caller cannot mistake a corrupt-but-present file for valid ownership (ledger decision 75). The remaining candidate contents, `config.json` and `logs\`, are not yet implemented.
 
@@ -300,7 +294,7 @@ Required properties:
 
 ### StateCoordinator
 
-**[IMPLEMENTED]** `engine/internal/application.Coordinator`. One coordinator owns all state transitions. Detector callbacks, Vue handlers, tray callbacks, startup, and recovery code submit observations/commands; they do not call Windows managers directly.
+**[IMPLEMENTED]** `internal/application.Coordinator`. One coordinator owns all state transitions. Detector callbacks, Vue handlers, tray callbacks, startup, and recovery code submit observations/commands; they do not call Windows managers directly.
 
 Desired state is derived from:
 
@@ -445,17 +439,23 @@ no valid snapshot    → report no Remotune recovery state; do not guess
 
 ## Wails and Vue boundaries
 
-Wails owns:
+**[IMPLEMENTED]** Wails owns:
 
-- application lifecycle;
-- system tray and menus;
-- window show/hide;
-- autostart integration;
-- Go↔Vue binding/event transport.
+- application lifecycle (`application.New`, `app.Run`, `app.Quit`);
+- system tray and menus (`app.SystemTray.New`, tray context menu);
+- `DisableQuitOnLastWindowClosed` so automation survives window close;
+- `ApplicationStarted` event hook triggers `svc.Run()` in a goroutine;
+- shutdown: `app.Run()` returns → `svc.Shutdown()` → coordinator Quit → process exit.
+
+**[IMPLEMENTED]** `internal/lifecycle.Service` bridges Wails to the coordinator:
+
+- `Run(ctx)` initializes adapters, recovery store, coordinator, and drives the CRD poll loop;
+- `Shutdown()` cancels the poll loop, waits for exit, then calls `coord.Quit()`;
+- `Status()`, `Pause()`, `Resume()`, `RestoreNow()` proxy to the coordinator under a mutex.
 
 Wails does not own tuning decisions or platform mutations.
 
-Vue:
+**[PLANNED]** Vue (Phase 5):
 
 - renders authoritative backend state;
 - sends commands such as Pause, Resume, Restore Now, and setting changes;
