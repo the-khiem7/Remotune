@@ -4,14 +4,14 @@ pack: "remotune"
 document: "roadmap"
 status: "active"
 updated: "2026-08-14"
-code_ref: "2b96ec90e9d73889291a45f9ce2508d344308aa0"
+code_ref: "uncommitted"
 ---
 
 # Remotune Implementation Roadmap
 
 ## Current checkpoint
 
-**[DECIDED]** Product direction is approved. **[IMPLEMENTED]** The Phase 1 Windows adapter layer exists in the standalone `engine/` Go module. **[PLANNED]** The CRD detector (Phase 2), coordinator and durable recovery store (Phase 3), and Wails shell (Phase 4) do not exist yet. The repository also contains documentation and the Phase 0 evidence tooling under `tools/phase0/`.
+**[DECIDED]** Product direction is approved. **[IMPLEMENTED]** Phase 1 (Windows tuning adapters) and Phase 2 (CRD detector) both exist in the standalone `engine/` Go module, verified against real Windows state and a real, live CRD session respectively. **[PLANNED]** The coordinator and durable recovery store (Phase 3) and Wails shell (Phase 4) do not exist yet. The repository also contains documentation and the Phase 0 evidence tooling under `tools/phase0/`.
 
 **[VERIFIED]** A Phase 0 evidence spike was executed on 2026-08-14 on the actual Controlled machine and is now substantially complete. All four areas are closed with reproducible live evidence recorded in [Phase 0 recorded evidence](#phase-0-recorded-evidence), including the exact 22-value set that `Adjust for best performance` changes and a passing arbitrary-`Custom` round-trip. Remaining gaps are environment coverage only: Windows 10, multi-monitor and secondary taskbars, Explorer-restart reconciliation, and the Wails runtime APIs that require the pinned project to exist.
 
@@ -370,7 +370,9 @@ Both gate cases identified after Phase 0 were exercised on 2026-08-14 and now pa
 
 ## Phase 2 — CRD detector
 
-**Status:** **[PLANNED]**, **unblocked**, and split into two work groups because the CRD host this phase depends on is the operator's real, currently-in-use session. Real events cannot be manufactured by Remotune; the detector only reads what CRD itself writes to the Event Log.
+**Status:** **[IMPLEMENTED]**. Both work groups are complete as of 2026-08-14: Group A (historical query, parsing, PID-scoped reconstruction, active-client set) and Group B (live `EvtSubscribe`), including a defect found and fixed during Group B. Implemented in `engine/internal/crd`, same standalone module as Phase 1, no Wails dependency.
+
+Real events cannot be manufactured by Remotune; the detector only reads what CRD itself writes to the Event Log. This phase was split into two work groups for that reason before implementation started:
 
 **[DECIDED]** Group split, agreed with the operator on 2026-08-14 before implementation started:
 
@@ -387,26 +389,61 @@ Both gate cases identified after Phase 0 were exercised on 2026-08-14 and now pa
    and report whether both the disconnect and the reconnect were captured
 ```
 
-No observation happens while the operator is disconnected; the watcher process does the capturing and the log is read back afterward.
+No observation happened while the operator was disconnected; a background watcher process did the capturing and its log was read back afterward, once, per the protocol above.
 
 ### Deliverables
+
+Implemented in `engine/internal/crd`:
+
+| Unit | State |
+|---|---|
+| `win32.go` | `wevtapi.dll` bindings (`EvtQuery`, `EvtNext`, `EvtRender`, `EvtClose`, `EvtCreateBookmark`, `EvtUpdateBookmark`, `EvtSubscribe`) plus the `kernel32.dll` event primitives pull-mode subscription needs |
+| `event.go` | `ParseTransition`, redacting the account email at the parse boundary; verified channel, provider, XPath |
+| `history.go` | `QueryHistory`: full historical replay oldest-to-newest plus a bookmark positioned at the newest event |
+| `reconstruct.go` | `Reconstruct`: pure, no build tag, PID-scoped active-client set |
+| `subscribe.go` | `SubscribeAfterBookmark` / `Poll`: live subscription, gap-free handover from a bookmark |
+| `detector.go` | `Bootstrap`: the mandatory startup sequence, query then reconstruct |
+| `cmd/crdwatch` | operator observation tool for Group B: bootstraps, subscribes, and appends every transition to a log file |
 
 - historical bootstrap with native `EvtQuery` using the verified channel, provider, and XPath;
 - real-time subscription with native `EvtSubscribe` seeded from the historical bookmark, with read-existing-events enabled;
 - event parser for the verified event 1/2 payload, extracting the per-session JID resource and the emitting host `ProcessID`;
 - current-state reconstructor scoped to the current host process lifetime, treating a dangling connect from a dead PID as disconnected;
 - active-client set keyed by the per-session JID resource;
-- transition deduplication and detector health/error reporting;
-- immediate redaction of account email and client `ip:port`;
-- handling for rotation, clear, stale bookmark, delayed callback, and host/service restart.
+- immediate redaction of account email and client `ip:port`.
+
+**[UNVERIFIED]**, deferred to Phase 6: transition deduplication under adversarial reordering, Event Log rotation/clear fallback, and detector health/error reporting as a first-class signal (errors currently surface as Go `error` values, not yet as a diagnostics-facing health state).
+
+### Phase 2 recorded evidence
+
+**[VERIFIED]** Group A: `TestBootstrapAgainstRealEventLog` and `TestQueryHistoryAgainstRealEventLog` run against the real Event Log on every test run (no gating needed, since Group A performs no mutation). On 2026-08-14 they found 198 real transitions with 0 malformed, and correctly reconstructed the operator's actual live state (`Connected`, 1 active session, current host PID matching the running `remoting_host.exe`) from history alone. `Reconstruct` additionally has 11 unit tests reproducing every Phase 0 anomaly, including the exact host-restart `CONNECT -> CONNECT` sequence.
+
+**[VERIFIED]** Group B closed a real defect, found during the observation protocol itself rather than beforehand:
+
+```text
+1. watcher started (bootstrap correctly found the operator's already-Connected session)
+2. operator disconnected, then reconnected, twice
+3. watcher's log showed zero transitions captured -> defect
+```
+
+**[VERIFIED]** Root cause, isolated with raw Win32 probes independent of this package's own wrapper: `EvtSubscribe`'s pull-mode `SignalEvent` must be created **already signaled** (`CreateEventW(NULL, TRUE, TRUE, NULL)`). An ordinarily-defaulted, initially-unsignaled event made `EvtSubscribe`'s own signal never fire, confirmed with a real backlog event already queued past the bookmark. `WaitForSingleObject` on the same handle worked correctly in isolation, which pinpointed the defect to the initial state argument specifically. See ledger decisions 66 to 69; decision 38 is corrected by decision 67.
+
+**[VERIFIED]** After the fix, the same live protocol captured all 4 real transitions from the operator's two disconnect/reconnect cycles, in order, with correct kind, timing, and session ID:
+
+```text
+Disconnected (rec 47688) -> Connected (rec 47689, new session)
+-> Disconnected (rec 47691) -> Connected (rec 47692, new session)
+```
+
+Two permanent regression tests (`TestSubscribeReplaysFromMidHistoryBookmark`, `TestWaitForSignalFiresAfterSubscribeWithExistingBacklog`) now cover this without requiring a future live disconnect: both seed a bookmark mid-history, where a real backlog already exists, and assert it is delivered through the subscription.
 
 ### Acceptance gate
 
-- normal connect and disconnect are detected automatically;
-- starting Remotune during an active CRD session reconstructs `Connected`;
-- process presence is not used as the source of truth;
-- duplicate transitions do not create false ownership cycles;
-- detector failures are observable.
+- normal connect and disconnect are detected automatically — **[VERIFIED]**, live protocol above;
+- starting Remotune during an active CRD session reconstructs `Connected` — **[VERIFIED]**, `TestBootstrapAgainstRealEventLog`;
+- process presence is not used as the source of truth — **[VERIFIED]** by construction, `Bootstrap` only calls `QueryHistory` and `Reconstruct`, neither of which inspects running processes;
+- duplicate transitions do not create false ownership cycles — **[VERIFIED]**, `TestReconstructDuplicateConnectIsIdempotent` / `TestReconstructDuplicateDisconnectDoesNotCorrupt`;
+- detector failures are observable — **[PLANNED]**, currently a Go `error` return, not yet wired to a diagnostics-facing health state (belongs with Phase 3).
 
 ## Phase 3 — Coordinator and recovery
 
@@ -582,22 +619,18 @@ Closing the window leaves automation running; explicit Quit restores owned Windo
 
 ## Exact next action
 
-Phase 1's adapter layer is implemented and committed (`engine/`, commit `2b96ec9`). Phase 2 is approved to start, split into Group A and Group B as decided above.
+Phase 1 and Phase 2 are both implemented and verified, including one live CRD disconnect/reconnect cycle that found and fixed a real `EvtSubscribe` signaling defect (ledger decisions 66-69). Both live in the standalone `engine/` Go module with no Wails dependency.
 
 ```text
-1. implement Phase 2 Group A in the same standalone Go module (internal/crd, no Wails):
-   - EvtQuery historical bootstrap using the verified channel/provider/XPath
-   - event parser extracting the session JID resource and host ProcessID
-   - bookmark capture and replay
-   - PID-scoped state reconstruction (dangling connect from a dead PID = disconnected)
-   - active-client set keyed by the per-session JID resource
-   - test all of the above against the 191 events already in the Event Log
-2. defer Phase 2 Group B (live EvtSubscribe verification) until the operator disconnects
-   on their own schedule; follow the observation protocol above, do not request it
-3. once Group B is verified, close remaining Phase 1 work: the durable snapshot store
-   (belongs with Phase 3 recovery data)
-4. only after Phases 1-2 are both complete: scaffold the pinned Wails project (v3.0.0-beta.8)
+1. close remaining Phase 1 work: the durable snapshot store (belongs with Phase 3 recovery data)
+2. begin Phase 3 (StateCoordinator): serialize transitions, derive desired state from
+   crd.Snapshot + automation config + persisted ownership, wire wintune.VisualEffectsManager
+   and wintune.TaskbarManager as the apply/restore targets
+3. wire crd.Bootstrap + a long-running crd.Subscription into the coordinator's startup path
+4. wire detector failures (currently Go error returns) into the coordinator's health/diagnostics
+   surface, and add Event Log rotation/clear fallback (both deferred from Phase 2 to Phase 3/6)
+5. only after Phase 3 is stable: scaffold the pinned Wails project (v3.0.0-beta.8)
    and migrate the engine/ packages into it per decision 52
 ```
 
-Treat `tools/phase0/Get-VisualState.ps1` and `tools/phase0/Restore-VisualState.ps1` as superseded by the Go implementation in `engine/internal/wintune`, which is now the behavioural reference. Do not claim Windows 10, multi-monitor, or secondary-taskbar support until those environments are actually observed.
+Treat `engine/internal/wintune` and `engine/internal/crd` as the behavioural reference; the PowerShell tools under `tools/phase0/` are superseded evidence artifacts, not live specifications. Do not claim Windows 10, multi-monitor, secondary-taskbar, or multi-client-CRD support until those configurations are actually observed.
