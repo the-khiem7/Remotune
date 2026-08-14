@@ -125,6 +125,7 @@ function New-Snapshot {
     $reg['UserPreferencesMask'] = Get-RegVal 'HKCU:\Control Panel\Desktop' 'UserPreferencesMask'
     $reg['Desktop.DragFullWindows'] = Get-RegVal 'HKCU:\Control Panel\Desktop' 'DragFullWindows'
     $reg['Desktop.FontSmoothing'] = Get-RegVal 'HKCU:\Control Panel\Desktop' 'FontSmoothing'
+    $reg['Desktop.FontSmoothingType'] = Get-RegVal 'HKCU:\Control Panel\Desktop' 'FontSmoothingType'
     $reg['Desktop.MenuShowDelay'] = Get-RegVal 'HKCU:\Control Panel\Desktop' 'MenuShowDelay'
     $reg['WindowMetrics.MinAnimate'] = Get-RegVal 'HKCU:\Control Panel\Desktop\WindowMetrics' 'MinAnimate'
     foreach ($n in 'ListviewAlphaSelect', 'ListviewShadow', 'TaskbarAnimations', 'IconsOnly', 'ShowTaskViewButton') {

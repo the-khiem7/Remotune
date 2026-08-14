@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-14T08:13:22.8151459+07:00",
+  "machine": "THEKHIEM7-TUF",
+  "osBuild": "10.0.22631.0 UBR=6494",
+  "spi": {
+    "DragFullWindows": 0,
+    "FontSmoothing": 0,
+    "MenuAnimation": 0,
+    "ComboBoxAnimation": 0,
+    "ListBoxSmoothScrolling": 0,
+    "GradientCaptions": 1,
+    "KeyboardCues": 0,
+    "HotTracking": 1,
+    "MenuFade": 1,
+    "SelectionFade": 0,
+    "TooltipAnimation": 0,
+    "TooltipFade": 1,
+    "CursorShadow": 0,
+    "FlatMenu": 1,
+    "DropShadow": 0,
+    "UIEffects": 1,
+    "ClientAreaAnimation": 0,
+    "MinAnimate": 0
+  },
+  "registry": {
+    "VisualFXSetting": 2,
+    "UserPreferencesMask": "0x9012038010000000",
+    "Desktop.DragFullWindows": "0",
+    "Desktop.FontSmoothing": "0",
+    "Desktop.MenuShowDelay": "400",
+    "WindowMetrics.MinAnimate": "0",
+    "Advanced.ListviewAlphaSelect": 0,
+    "Advanced.ListviewShadow": 0,
+    "Advanced.TaskbarAnimations": 0,
+    "Advanced.IconsOnly": 1,
+    "Advanced.ShowTaskViewButton": null,
+    "DWM.EnableAeroPeek": 0,
+    "DWM.AlwaysHibernateThumbnails": 0,
+    "DWM.Composition": 1
+  },
+  "visualFxSub": {
+    "AnimateMinMax": 1,
+    "ComboBoxAnimation": 1,
+    "ControlAnimations": 1,
+    "CursorShadow": 1,
+    "DragFullWindows": 1,
+    "DropShadow": 1,
+    "DWMAeroPeekEnabled": 1,
+    "DWMEnabled": 1,
+    "DWMSaveThumbnailEnabled": 1,
+    "FontSmoothing": null,
+    "ListBoxSmoothScrolling": 1,
+    "ListviewAlphaSelect": 1,
+    "ListviewShadow": 1,
+    "MenuAnimation": 1,
+    "SelectionFade": 1,
+    "TaskbarAnimations": 1,
+    "Themes": 1,
+    "ThumbnailsOrIcon": 1,
+    "TooltipAnimation": 1
+  },
+  "dwmComposition": true,
+  "taskbar": {
+    "abmState": 1,
+    "absAutoHide": true,
+    "absAlwaysOnTop": false,
+    "otherBits": 0,
+    "taskbarRect": "3:0,1026,1920,1080"
+  },
+  "screens": [
+    {
+      "device": "\\\\.\\DISPLAY1",
+      "primary": true,
+      "bounds": "{X=0,Y=0,Width=1920,Height=1080}",
+      "workArea": "{X=0,Y=0,Width=1920,Height=1080}"
+    }
+  ]
+}

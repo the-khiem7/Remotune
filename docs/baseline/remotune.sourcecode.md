@@ -172,7 +172,34 @@ GetCurrentState()
 
 **[VERIFIED]** Two traps are settled. The 19 `VisualEffects` subkeys hold only `DefaultApplied` bookkeeping and are not effect state. And `UserPreferencesMask` contains set bits that could not be attributed to any documented effect, so it is snapshotted and restored as an **opaque 8-byte blob**; unattributed bits are preserved by construction rather than by understanding them. Per-effect reads and writes go through `SystemParametersInfo`.
 
-**[UNVERIFIED]** The exact value set that Windows' `Adjust for best performance` action changes is still outstanding, because Windows exposes no documented API for the preset. Until it is captured by diffing snapshots around the real operator action, `ApplyBestPerformance()` must not be written. The arbitrary `Custom` round-trip proof depends on the same evidence. Windows 10 behavior is also uncollected.
+**[VERIFIED]** A snapshot is only complete when it spans three layers. No single layer suffices:
+
+```text
+layer 1  per-effect values via SystemParametersInfo
+layer 2  discrete registry values with NO SPI accessor
+         Explorer\Advanced: ListviewAlphaSelect, ListviewShadow, TaskbarAnimations, IconsOnly
+         DWM: EnableAeroPeek, AlwaysHibernateThumbnails, Composition
+         Desktop: FontSmoothing, FontSmoothingType, DragFullWindows, MenuShowDelay
+         WindowMetrics: MinAnimate
+layer 3  UserPreferencesMask, opaque, verbatim
+```
+
+**[VERIFIED]** `ApplyBestPerformance()` reproduces the 22-value set that the real Windows preset changes, enumerated in the Phase 0 evidence. It must not disable effects the preset leaves alone, and it must account for `IconsOnly` rising from 0 to 1 rather than falling.
+
+**[VERIFIED]** `FontSmoothing` is not boolean: the registry held `2` while the SPI accessor reported `1`. Restoring from the boolean would silently downgrade ClearType, so the registry value is authoritative and `FontSmoothingType` travels with it.
+
+**[VERIFIED]** Apply and restore share one write order, and the order is load-bearing:
+
+```text
+1. SystemParametersInfo per-effect writes, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE
+2. discrete registry values
+3. UserPreferencesMask verbatim, LAST, so no SPI write can clobber unattributed bits
+4. WM_SETTINGCHANGE broadcast
+```
+
+**[VERIFIED]** Both operations are proven on the supported configuration: an arbitrary `Custom` state survived an apply/restore cycle with no differences, and applying Best Performance from a `Custom` start produced a state identical to the operator-produced preset, so apply is deterministic and start-state independent.
+
+**[UNVERIFIED]** Windows 10 behavior is uncollected, the unattributed mask bit remains unexplained though safely preserved, and the visual immediacy of the Explorer-backed values was not confirmed even though their persisted values round-trip correctly.
 
 ### TaskbarManager
 
@@ -217,7 +244,13 @@ Conceptual, not final, snapshot. The shape below reflects Phase 0 evidence: the 
     "visualFxSetting": 1,
     "userPreferencesMask": "0x9E3E078012000000",
     "spi": { "MenuAnimation": 1, "MinAnimate": 1, "...": "one entry per probed SPI action" },
-    "registry": { "Desktop.DragFullWindows": 1, "...": "discrete supporting values" }
+    "registry": {
+      "Desktop.FontSmoothing": 2,
+      "Desktop.FontSmoothingType": 2,
+      "Advanced.IconsOnly": 0,
+      "DWM.EnableAeroPeek": 1,
+      "...": "every layer-2 value listed above"
+    }
   },
   "taskbar": {
     "abmState": 1,

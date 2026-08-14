@@ -67,6 +67,12 @@ Added 2026-08-14. Each item is **[DECIDED]** and rests on live observation recor
 43. Wails is pinned to **v3.0.0-beta.8** (2026-08-12, commit `81a1499`).
 44. WebView2 presence is detected by reading `pv` under the `{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}` EdgeUpdate client key, probing the HKLM 64-bit, HKLM `WOW6432Node`, and HKCU locations.
 45. CRD events expose the account email in events 1, 2, and 4, and the client `ip:port` in event 4. Both are redacted at parse time and never persisted.
+46. `Adjust for best performance` changes an exact, known set of 22 values on the supported configuration. Remotune reproduces that set rather than inventing its own definition of Best Performance. Seven probed effects are deliberately left untouched because the Windows preset does not touch them.
+47. A Visual Effects snapshot must capture three layers together: per-effect `SystemParametersInfo` values, the discrete Explorer/DWM/Desktop registry values that have no SPI accessor, and the opaque `UserPreferencesMask`. Any single layer alone is provably incomplete.
+48. `FontSmoothing` is not a boolean. Its registry value was `2` while its SPI accessor reported `1`, so restoring from the boolean would silently downgrade ClearType. The registry value is authoritative, and `FontSmoothingType` is captured alongside it.
+49. `IconsOnly` is inverted relative to the other effects: the performance preset raises it from 0 to 1. A blanket "disable everything" apply is therefore incorrect.
+50. Apply and restore both use this order: per-effect SPI writes with update-and-broadcast flags, then discrete registry values, then `UserPreferencesMask` written verbatim last so no SPI write can clobber unattributed bits, then a `WM_SETTINGCHANGE` broadcast.
+51. Applying Best Performance is deterministic and independent of the starting state; the result from an arbitrary `Custom` start was identical to the operator-produced preset.
 
 ## Open questions — CRD detector
 
@@ -89,24 +95,26 @@ Still **[UNVERIFIED]**:
 
 ## Open questions — Windows Best Performance
 
-Partially resolved on 2026-08-14. This is the least closed area and the current blocker for Phase 1.
+Substantially resolved on 2026-08-14, on one configuration.
 
 Resolved:
 
 - **Resolved.** The accessor surface: 17 `SPI_GET*` actions plus `SPI_GETANIMATION` cover the individual effects and all work non-elevated. Constants are tabulated in the Phase 0 evidence.
 - **Resolved.** Where the preset selection lives (`VisualFXSetting`) and what its four values mean.
 - **Resolved.** Which locations are *not* state: the `VisualEffects` subkeys — decision 42.
-- **Resolved.** How to represent the mask safely without decoding every bit — decision 41.
+- **Resolved.** How to represent the mask safely without decoding every bit — decision 41, now proven necessary because the preset clears an unattributed bit.
+- **Resolved.** Exactly which values `Adjust for best performance` changes: the 22-value set — decision 46.
+- **Resolved.** Arbitrary `Custom` restores exactly; the round-trip gate passed with no differences.
+- **Resolved.** How presets and `Custom` are represented without losing individual values: store all three layers and never rely on the radio selection — decision 47.
+- **Resolved.** Which mechanism applies the changes and in what order — decision 50. Changes were immediate for the probed effects; no Explorer restart was needed to persist or verify them.
+- **Resolved.** The safe boundary for registry-backed writes: they are required, not optional, because Explorer-only values have no SPI accessor. Safety comes from snapshot-verify-diff rather than from avoiding the registry.
 
 Still **[UNVERIFIED]**:
 
-- Exactly which values does the Windows `Adjust for best performance` action change? Windows exposes no documented API for the preset, so this must be captured by diffing snapshots around the real operator action. This is the single highest-value remaining Phase 0 item.
-- Can an arbitrary `Custom` combination be restored exactly? This depends on the answer above and must be demonstrated, not assumed.
-- How should “Let Windows choose,” Best Appearance, Best Performance, and Custom be represented so that individual values are never lost?
-- Are all effect changes immediate, and is an Explorer restart ever required for any of them?
-- Which changes need a settings broadcast or Explorer notification beyond the `SystemParametersInfo` write itself?
-- What differs on Windows 10? All evidence is Windows 11 23H2 build 22631.
-- If any registry-backed write proves necessary, what verification strategy makes it safe?
+- What differs on Windows 10? All evidence is Windows 11 23H2 build 22631. The affected value set, the mask layout, and the identity of unattributed bits must be re-derived there.
+- What does the unattributed `UserPreferencesMask` byte 2 bit `0x04` actually control? Preserving it verbatim makes this safe to leave unknown, but it stays unexplained.
+- Do the Explorer-backed values (`ListviewAlphaSelect`, `ListviewShadow`, `TaskbarAnimations`, `IconsOnly`) take visual effect without an Explorer restart? Their persisted values round-tripped correctly, which is what restore fidelity requires, but visual immediacy was not confirmed.
+- Does the 22-value set shift across future Windows 11 feature updates?
 
 Do not implement a restore that merely resets the radio selection; exact affected values must round-trip.
 

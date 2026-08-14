@@ -13,7 +13,9 @@ code_ref: "uncommitted"
 
 **[DECIDED]** Product direction is approved. **[PLANNED]** No application code exists yet; the repository contains documentation plus the Phase 0 evidence tooling under `tools/phase0/`.
 
-**[VERIFIED]** A Phase 0 evidence spike was executed on 2026-08-14 on the actual Controlled machine. The CRD detector, taskbar, and Wails/prerequisite areas are closed with reproducible live evidence recorded in [Phase 0 recorded evidence](#phase-0-recorded-evidence). **[UNVERIFIED]** The Visual Effects area is partially closed: the value model and accessor API are established, but the `Adjust for best performance` ground-truth diff and the arbitrary `Custom` round-trip proof are still outstanding.
+**[VERIFIED]** A Phase 0 evidence spike was executed on 2026-08-14 on the actual Controlled machine and is now substantially complete. All four areas are closed with reproducible live evidence recorded in [Phase 0 recorded evidence](#phase-0-recorded-evidence), including the exact 22-value set that `Adjust for best performance` changes and a passing arbitrary-`Custom` round-trip. Remaining gaps are environment coverage only: Windows 10, multi-monitor and secondary taskbars, Explorer-restart reconciliation, and the Wails runtime APIs that require the pinned project to exist.
+
+**Phase 1 and Phase 2 are both unblocked and may proceed in parallel.**
 
 The roadmap builds toward the finished product; it does not prescribe a throwaway MVP. UI polish is intentionally blocked until the Windows/CRD fundamentals are proven.
 
@@ -36,7 +38,7 @@ Phase 6: Hardening and release evidence
 
 ## Phase 0 — Windows and CRD research spike
 
-**Status:** **[VERIFIED]** for CRD detection, taskbar, and Wails/prerequisites. **[UNVERIFIED]** for the two Visual Effects items listed in [Outstanding Phase 0 items](#outstanding-phase-0-items). Windows 10 coverage and multi-monitor coverage remain uncollected because no such environment was available.
+**Status:** **[VERIFIED]** and substantially complete. CRD detection, the Windows tuning value model, apply/restore with an exact arbitrary-`Custom` round-trip, taskbar control, and the Wails/prerequisite facts are all closed with reproducible live evidence. The residual gaps in [Outstanding Phase 0 items](#outstanding-phase-0-items) are environment-coverage items, not unknown mechanisms, and none of them block Phase 1 or Phase 2 on the supported configuration.
 
 ### Deliverables
 
@@ -175,7 +177,65 @@ Changes take effect immediately, settle within roughly 1.2 s, and require no Exp
 
 **[DECIDED]** Byte 2 (`0x07`) and byte 4 mask `0x10` were set but could not be attributed to any documented effect. Because a partially understood bitfield cannot guarantee an exact round-trip, `UserPreferencesMask` is treated as an **opaque 8-byte blob** that is snapshotted and restored verbatim, while `SystemParametersInfo` is the authoritative per-effect accessor. This preserves unattributed bits by construction.
 
-Supporting values captured for the snapshot schema: `DwmIsCompositionEnabled` = true; `HKCU\...\DWM` `EnableAeroPeek` = 1, `AlwaysHibernateThumbnails` = 1, `Composition` = 1; `Explorer\Advanced` `ListviewAlphaSelect` = 1, `ListviewShadow` = 1, `TaskbarAnimations` = 1, `IconsOnly` = 0; `Control Panel\Desktop` `DragFullWindows` = 1, `FontSmoothing` = 2, `MenuShowDelay` = 400; `WindowMetrics\MinAnimate` = 1.
+Supporting values captured for the snapshot schema: `DwmIsCompositionEnabled` = true; `HKCU\...\DWM` `EnableAeroPeek` = 1, `AlwaysHibernateThumbnails` = 1, `Composition` = 1; `Explorer\Advanced` `ListviewAlphaSelect` = 1, `ListviewShadow` = 1, `TaskbarAnimations` = 1, `IconsOnly` = 0; `Control Panel\Desktop` `DragFullWindows` = 1, `FontSmoothing` = 2, `FontSmoothingType` = 2, `MenuShowDelay` = 400; `WindowMetrics\MinAnimate` = 1.
+
+#### Ground truth of `Adjust for best performance`
+
+**[VERIFIED]** Captured by diffing a full snapshot before and after the real Performance Options action, moving from `Adjust for best appearance` to `Adjust for best performance`. The action changed exactly **22 values**.
+
+Eleven effects went from 1 to 0 through `SystemParametersInfo`:
+
+```text
+DragFullWindows   FontSmoothing      MenuAnimation        ComboBoxAnimation
+ListBoxSmoothScrolling               SelectionFade        TooltipAnimation
+CursorShadow      DropShadow         ClientAreaAnimation  MinAnimate
+```
+
+Seven probed effects were **left untouched** by the preset and must therefore not be forced off by a naive "disable everything" apply: `GradientCaptions`, `KeyboardCues`, `HotTracking`, `MenuFade`, `TooltipFade`, `FlatMenu`, `UIEffects`.
+
+Registry values changed: `VisualFXSetting` 1→2, `Desktop.DragFullWindows` 1→0, `Desktop.FontSmoothing` 2→0, `WindowMetrics.MinAnimate` 1→0, `Advanced.ListviewAlphaSelect` 1→0, `Advanced.ListviewShadow` 1→0, `Advanced.TaskbarAnimations` 1→0, `Advanced.IconsOnly` 0→**1**, `DWM.EnableAeroPeek` 1→0, `DWM.AlwaysHibernateThumbnails` 1→0. `DWM.Composition` and `Desktop.FontSmoothingType` were untouched.
+
+`UserPreferencesMask` moved `9E 3E 07 80 12 00 00 00` → `90 12 03 80 10 00 00 00`. Every cleared bit reconciles with the SPI results, with one exception:
+
+**[VERIFIED]** The preset clears **byte 2 mask `0x04`, which maps to no documented effect**. This is direct proof that a snapshot limited to known effects would silently lose user state, and it converts the opaque-blob decision from caution into a requirement.
+
+**[VERIFIED]** Three traps that a per-effect boolean model would have introduced:
+
+| Trap | Evidence | Consequence |
+|---|---|---|
+| `FontSmoothing` is not boolean | registry held `2`, while `SPI_GETFONTSMOOTHING` reports `1` | restoring from the SPI boolean would write `1` and silently downgrade ClearType; the registry value must be captured |
+| `IconsOnly` inverts | 0 → 1, the only value the preset raises | a "set everything to 0" apply would be wrong |
+| Explorer-only values have no SPI | `ListviewAlphaSelect`, `ListviewShadow`, `TaskbarAnimations`, `IconsOnly`, the DWM values | `SystemParametersInfo` alone cannot capture or restore a complete state |
+
+A complete snapshot therefore requires all three layers together: the per-effect SPI values, the discrete registry values, and the opaque mask.
+
+#### Apply and restore proof
+
+**[VERIFIED]** A programmatic restore reproduced the operator's original state exactly. Applying snapshot `01` over the Best Performance state returned all 22 values to their originals, including the unattributed mask bit; the only reported difference was `FontSmoothingType` appearing as absent in the earlier snapshot, a schema artifact from adding that field after the capture rather than a state change.
+
+**[VERIFIED]** The arbitrary `Custom` acceptance gate passed. An arbitrary combination matching neither preset was synthesised (`VisualFXSetting` = 3, mask `04 04 07 80 10 00 00 00`, mixed per-effect values, `IconsOnly` = 1, `ListviewShadow` = 0, `TaskbarAnimations` = 0, `EnableAeroPeek` = 0), applied, overwritten with Best Performance, then restored:
+
+```text
+synthesise Custom → apply → capture actual
+→ apply Best Performance
+→ restore captured Custom
+→ diff: NO DIFFERENCES
+```
+
+**[VERIFIED]** Applying Best Performance from a `Custom` starting point produced a state identical to the operator-produced preset, so the apply operation is deterministic and independent of the starting state.
+
+**[VERIFIED]** Verified write order for both apply and restore:
+
+```text
+1. SystemParametersInfo per-effect writes, flags SPIF_UPDATEINIFILE | SPIF_SENDCHANGE
+2. discrete registry values (Explorer\Advanced, DWM, Desktop, WindowMetrics)
+3. UserPreferencesMask written verbatim LAST, so no SPI write can clobber unattributed bits
+4. WM_SETTINGCHANGE broadcast
+```
+
+The machine was returned to the operator's original state and independently confirmed: `VisualFXSetting` = 1, mask `9E 3E 07 80 12 00 00 00`, `FontSmoothing` 2 / type 2, `IconsOnly` = 0, `TaskbarAnimations` = 1, `EnableAeroPeek` = 1, `MinAnimate` = 1.
+
+Tooling retained: `tools/phase0/Restore-VisualState.ps1` (generic "apply this exact state", the reference for both `ApplyBestPerformance()` and `Restore(snapshot)`) and `tools/phase0/Test-CustomRoundTrip.ps1` (the acceptance gate, which restores the operator snapshot in a `finally` block).
 
 ### Wails and distribution
 
@@ -187,16 +247,14 @@ Supporting values captured for the snapshot schema: `DwmIsCompositionEnabled` = 
 
 | Item | Status | Why it is still open |
 |---|---|---|
-| `Adjust for best performance` ground-truth diff | **[UNVERIFIED]** | Windows exposes no documented API for the preset itself, so the authoritative value set must be captured by diffing snapshots around the real Performance Options action. The dialog was opened and the pre-state snapshot captured; the operator action had not been performed when this checkpoint was written. |
-| Arbitrary `Custom` exact round-trip | **[UNVERIFIED]** | Depends on the diff above to know the complete affected value set. |
-| Windows 10 behavior | **[UNVERIFIED]** | No Windows 10 environment available. |
+| Windows 10 behavior | **[UNVERIFIED]** | No Windows 10 environment available. The affected value set, mask layout, and unattributed bits must be re-derived there before claiming support. |
 | Multi-monitor and secondary taskbar | **[UNVERIFIED]** | Only one display present on the evidence machine. |
 | Explorer restart reconciliation | **[UNVERIFIED]** | Not exercised during this spike; deferred to the Phase 6 matrix. |
 | Autostart Manager API and moved-portable-path behavior | **[UNVERIFIED]** | Requires the pinned Wails project to exist; belongs to Phase 4. |
 
 ## Phase 1 — Windows tuning engine
 
-**Status:** **[PLANNED]**. The taskbar half is unblocked: `SHAppBarMessage` is proven for read, apply, restore, and bit preservation. The Visual Effects half remains blocked on the preset diff and the `Custom` round-trip proof.
+**Status:** **[PLANNED]**, and **unblocked**. Both halves now rest on evidence: `SHAppBarMessage` is proven for read, apply, restore, and bit preservation, and the Visual Effects value set, write order, and exact `Custom` round-trip are proven. `tools/phase0/Get-VisualState.ps1` and `tools/phase0/Restore-VisualState.ps1` are the working references to port to Go.
 
 ### Deliverables
 
@@ -392,7 +450,9 @@ Closing the window leaves automation running; explicit Quit restores owned Windo
 | Wrong CRD event assumptions | **[VERIFIED]** resolved | Channel, provider, IDs, and payload captured live; constants may now be coded |
 | Lost disconnect leaves stale ownership | **[VERIFIED]** real, mitigated | Observed three times; scope replay to the current host process lifetime and treat dangling connects from a dead PID as disconnected |
 | Startup query/subscription gap | **[VERIFIED]** resolved | Subscribe from the bookmark of the last event consumed by the historical query; keep read-existing-events enabled |
-| Incomplete Visual Effects snapshot | **[UNVERIFIED]** | Capture the preset diff, then prove the Custom round-trip; treat `UserPreferencesMask` as an opaque blob so unattributed bits survive |
+| Incomplete Visual Effects snapshot | **[VERIFIED]** resolved | 22-value set captured from the real preset; snapshot spans SPI values, discrete registry values, and the opaque mask; arbitrary `Custom` round-trip passed with no differences |
+| Silent state loss via unattributed mask bits | **[VERIFIED]** real, mitigated | The preset clears byte 2 mask `0x04`, which maps to no documented effect; the mask is written verbatim and last so the bit survives |
+| Lossy per-effect boolean model | **[VERIFIED]** real, mitigated | `FontSmoothing` registry value is `2` while its SPI boolean reads `1`; `IconsOnly` inverts; Explorer-only values have no SPI accessor. Capture all three layers |
 | Multiple CRD clients | **[UNVERIFIED]** narrowed | No overlap observed in 191 events; keep the active-client set keyed by the per-session JID resource so either behavior is handled |
 | Partial system mutation | **[PLANNED]** | Durable pre-write snapshot, transaction states, verification, retry |
 | Race between transitions | **[PLANNED]** | Single serialized coordinator; latest desired state wins |
@@ -406,16 +466,17 @@ Closing the window leaves automation running; explicit Quit restores owned Windo
 
 ## Exact next action
 
-Close the Visual Effects ground-truth gap on the Controlled machine, because it is the last blocker for Phase 1 and the only Phase 0 item that requires a manual operator action.
+Phase 0 is closed for the supported configuration. Begin implementation by scaffolding the pinned Wails project and porting the two proven adapters to Go, since Phase 1 and Phase 2 no longer depend on each other.
 
 ```text
-1. tools/phase0/Get-VisualState.ps1 -Label 02-preset-bestperformance   (pre-state already saved as 01-baseline-bestappearance)
-2. In Performance Options → Visual Effects, select "Adjust for best performance" → Apply → OK
-3. Get-VisualState.ps1 -Label 02-preset-bestperformance
-4. Get-VisualState.ps1 -Diff 01-baseline-bestappearance,02-preset-bestperformance
-5. Restore the operator's original selection, re-capture, and confirm the diff is symmetric
+1. install the wails3 CLI and scaffold the project pinned to v3.0.0-beta.8
+2. port TaskbarManager first: SHAppBarMessage read, single-bit write, work-area verification
+3. port VisualEffectsManager using the verified three-layer snapshot and the four-step write order
+4. reproduce the Custom round-trip as an automated test against the Go implementation
+5. in parallel, build CRDDetector on the verified channel, provider, event IDs, session key,
+   PID-scoped reconstruction, and bookmark handover
 ```
 
-The resulting diff is the authoritative set of values that `Adjust for best performance` changes. Record it in [Phase 0 recorded evidence](#phase-0-recorded-evidence), then prove an arbitrary `Custom` state round-trips exactly before writing `VisualEffectsManager`.
+Treat `tools/phase0/Get-VisualState.ps1` and `tools/phase0/Restore-VisualState.ps1` as the behavioural specification: the Go implementation must reproduce their results, and `tools/phase0/Test-CustomRoundTrip.ps1` defines the gate it must pass.
 
-Detector constants are now evidence-backed, so **Phase 2 is unblocked and may start in parallel** without waiting for the Visual Effects diff.
+Do not claim Windows 10, multi-monitor, or secondary-taskbar support until those environments are actually observed.

@@ -37,7 +37,9 @@ A **[VERIFIED]** fact is only as broad as the configuration it was observed on. 
 
 **[DECIDED]** Remotune is approved for implementation handoff as a Windows tray-first background utility built with Wails v3, Go, and Vue. The repository contains documentation plus the Phase 0 evidence tooling in `tools/phase0/`; no application implementation exists.
 
-**[VERIFIED]** A Phase 0 evidence spike ran on 2026-08-14 against the real Controlled machine (Windows 11 Pro 23H2 build 22631.6494, CRD host 152.0.7977.9, non-elevated user). CRD detection, taskbar control, and the Wails/WebView2 prerequisites are now evidence-backed; the Visual Effects preset diff and the arbitrary `Custom` round-trip proof remain open. Full observations, scope limits, and the exact continuation point are in [Phase 0 recorded evidence](remotune.roadmap.md#phase-0-recorded-evidence).
+**[VERIFIED]** A Phase 0 evidence spike ran on 2026-08-14 against the real Controlled machine (Windows 11 Pro 23H2 build 22631.6494, CRD host 152.0.7977.9, non-elevated user) and is substantially complete. CRD detection, the Windows tuning value model, apply and restore including an exact arbitrary-`Custom` round-trip, taskbar control, and the Wails/WebView2 prerequisites are all evidence-backed. Remaining gaps are environment coverage rather than unknown mechanisms: Windows 10, multi-monitor and secondary taskbars, and Explorer-restart reconciliation. Full observations and scope limits are in [Phase 0 recorded evidence](remotune.roadmap.md#phase-0-recorded-evidence).
+
+**[VERIFIED]** The core invariant is now demonstrated rather than merely intended: an arbitrary `Custom` Visual Effects state survived an apply/restore cycle with no differences, including a `UserPreferencesMask` bit that maps to no documented effect and would have been lost by a snapshot limited to known settings.
 
 **[DECIDED]** Remotune runs on the **Controlled machine** (currently the user's home machine), where Windows settings and the CRD host exist. The **Controlling machine** is currently the user's work machine. Chrome Remote Desktop (CRD) is the initial remote-session provider and trigger.
 
