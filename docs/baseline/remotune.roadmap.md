@@ -11,11 +11,11 @@ code_ref: "uncommitted"
 
 ## Current checkpoint
 
-**[DECIDED]** Product direction is approved. **[PLANNED]** No application code exists yet; the repository contains documentation plus the Phase 0 evidence tooling under `tools/phase0/`.
+**[DECIDED]** Product direction is approved. **[IMPLEMENTED]** The Phase 1 Windows adapter layer exists in the standalone `engine/` Go module. **[PLANNED]** The CRD detector (Phase 2), coordinator and durable recovery store (Phase 3), and Wails shell (Phase 4) do not exist yet. The repository also contains documentation and the Phase 0 evidence tooling under `tools/phase0/`.
 
 **[VERIFIED]** A Phase 0 evidence spike was executed on 2026-08-14 on the actual Controlled machine and is now substantially complete. All four areas are closed with reproducible live evidence recorded in [Phase 0 recorded evidence](#phase-0-recorded-evidence), including the exact 22-value set that `Adjust for best performance` changes and a passing arbitrary-`Custom` round-trip. Remaining gaps are environment coverage only: Windows 10, multi-monitor and secondary taskbars, Explorer-restart reconciliation, and the Wails runtime APIs that require the pinned project to exist.
 
-**Phase 1 and Phase 2 are both unblocked and may proceed in parallel.**
+**Phase 2 is unblocked and may proceed independently of Phase 3.**
 
 The roadmap builds toward the finished product; it does not prescribe a throwaway MVP. UI polish is intentionally blocked until the Windows/CRD fundamentals are proven.
 
@@ -257,14 +257,29 @@ synthesise Custom → apply → capture actual
 
 **[VERIFIED]** Applying Best Performance from a `Custom` starting point produced a state identical to the operator-produced preset, so the apply operation is deterministic and independent of the starting state.
 
-**[VERIFIED]** Verified write order for both apply and restore:
+#### Write sequence, established during the Go port
+
+The PowerShell reference used `SPIF_UPDATEINIFILE | SPIF_SENDCHANGE` on every per-effect write and then wrote the mask last. It appeared stable, but porting it to Go and running the suite repeatedly exposed it as **racy rather than correct**. Two intermediate orderings were tried and rejected before the cause was measured; the sequence below is the one that survives repeated runs.
 
 ```text
-1. SystemParametersInfo per-effect writes, flags SPIF_UPDATEINIFILE | SPIF_SENDCHANGE
-2. discrete registry values (Explorer\Advanced, DWM, Desktop, WindowMetrics)
-3. UserPreferencesMask written verbatim LAST, so no SPI write can clobber unattributed bits
-4. WM_SETTINGCHANGE broadcast
+1. SystemParametersInfo per-effect writes, SPIF_SENDCHANGE only  -> live session
+2. discrete registry values, EXCEPT the preset label            -> persistence
+3. UserPreferencesMask, one whole-blob write                    -> persistence
+4. settle, then VisualFXSetting alone                           -> preset label
+5. verify by re-reading; re-assert only what diverges; broadcast once at the end
 ```
+
+**[VERIFIED]** Three mechanisms forced this shape, each measured rather than assumed:
+
+| Mechanism | Evidence | Consequence |
+|---|---|---|
+| `SPIF_UPDATEINIFILE` persists a per-effect write by read-modify-writing the shared mask byte | consecutive writes to effects sharing byte 1 lost each other's bits, and some writes never reached the registry at all | drop the flag; `SystemParametersInfo` changes only the live session and persistence is written explicitly |
+| Windows re-labels the configuration as `Custom` asynchronously when individual effects change | `VisualFXSetting` never converged, being overwritten after each of four re-assertions | write the label last, on its own, after a short settle |
+| A global `WM_SETTINGCHANGE` mid-sequence makes the shell reload settings from the registry | writes that had already landed were pulled back to whatever the mask said at that instant | do not broadcast inside the write loop; broadcast once after the observed state already matches |
+
+**[DECIDED]** The unifying rule is the same one the taskbar defect produced: **write each layer deliberately instead of hoping one propagates to the other**, then verify the observable outcome. Apply and restore are consequently implemented as one bounded convergence loop that re-asserts only the values still diverging, and reports failure with the residual difference rather than declaring success.
+
+**[VERIFIED]** With this sequence the full suite passed five consecutive clean runs, having previously failed most runs.
 
 The machine was returned to the operator's original state and independently confirmed: `VisualFXSetting` = 1, mask `9E 3E 07 80 12 00 00 00`, `FontSmoothing` 2 / type 2, `IconsOnly` = 0, `TaskbarAnimations` = 1, `EnableAeroPeek` = 1, `MinAnimate` = 1.
 
@@ -287,7 +302,37 @@ Tooling retained: `tools/phase0/Restore-VisualState.ps1` (generic "apply this ex
 
 ## Phase 1 — Windows tuning engine
 
-**Status:** **[PLANNED]**, and **unblocked**. Both halves now rest on evidence: `SHAppBarMessage` is proven for read, apply, restore, and bit preservation, and the Visual Effects value set, write order, and exact `Custom` round-trip are proven. `tools/phase0/Get-VisualState.ps1` and `tools/phase0/Restore-VisualState.ps1` are the working references to port to Go.
+**Status:** **[IMPLEMENTED]** for the adapter layer, verified by an automated Go suite on 2026-08-14. Remaining Phase 1 work is the durable snapshot store and its persistence, which belongs with the coordinator's recovery data.
+
+Implemented in the standalone module `engine/` (module path `github.com/khiemnguyen/remotune/engine`, Go 1.26.1, only `golang.org/x/sys`, **no Wails dependency**):
+
+| Unit | State |
+|---|---|
+| `internal/wintune/win32.go` | SPI, appbar, broadcast and metrics bindings, with the uiParam/pvParam distinction encoded as `spiStyle` |
+| `internal/wintune/taskbar.go` | `TaskbarManager` writing both the live and persisted layers, with work-area verification |
+| `internal/wintune/visualfx.go` | `VisualEffectsManager` with three-layer snapshot, transformation-based apply, exact restore, and `DiffVisualEffects` |
+| `internal/wintune/snapshot.go` | versioned schema, validation, and the per-category failure model (`Partial`, `FullyVerified`) |
+| `cmd/tbset` | operator utility to inspect or correct taskbar state without running tests |
+
+Test results, `go test ./... -count=1` with `REMOTUNE_SYSTEM_TESTS=1`, all 12 passing:
+
+- arbitrary `Custom` round-trip is exact, with explicit assertions that both unexplained mask bits survive the apply;
+- taskbar round-trips from **both** an ON and an OFF baseline, with the two layers agreeing afterwards;
+- apply is idempotent;
+- restore refuses a nil or incomplete snapshot instead of guessing;
+- a partial failure never reports full success, and an unconfirmed write never counts as verified;
+- guard tests pin the 10-effect change list, the `IconsOnly` inversion, and the mask clear-mask against the recorded evidence.
+
+The suite earned its keep: running it repeatedly showed that the PowerShell reference behaviour was **racy rather than correct**, and it took several measured iterations to settle. What the tests found:
+
+1. **`SPIF_UPDATEINIFILE` races on the shared mask byte.** The root cause of most flakiness. See the write-sequence table above.
+2. **Windows re-labels `VisualFXSetting` asynchronously**, so that value never converged until it was written last and alone.
+3. **A mid-sequence global broadcast undoes landed writes.**
+4. **Unfair test fixture.** The first `Custom` test built a synthetic snapshot whose per-effect values and mask contradicted each other, a state Windows can never be in. Fixed by deriving the mask from the per-effect values so the layers agree by construction.
+
+Two of my own intermediate conclusions were wrong and are retracted in the ledger as decisions 63 and 64: an ordering change that reasoned from `SPIF_UPDATEINIFILE` being reliable, and a probe too weak to detect what it claimed to rule out. Both were caught by repeated runs rather than by a single passing run, which is the reason the suite is executed several times rather than once.
+
+System-mutating tests are opt-in behind `REMOTUNE_SYSTEM_TESTS=1` and restore the operator's state in `t.Cleanup`, so a casual `go test` cannot reconfigure a desktop.
 
 **[DECIDED]** Phase 1 lives in a standalone Go module holding only the adapters and their tests. It does not depend on Wails, and it is expected to be migrated into the CLI-generated project in Phase 4. See decision 52 in the [ledger](remotune.hallucination.md#decisions-closed-by-phase-0-evidence).
 

@@ -188,14 +188,26 @@ layer 3  UserPreferencesMask, opaque, verbatim
 
 **[VERIFIED]** `FontSmoothing` is not boolean: the registry held `2` while the SPI accessor reported `1`. Restoring from the boolean would silently downgrade ClearType, so the registry value is authoritative and `FontSmoothingType` travels with it.
 
-**[VERIFIED]** Apply and restore share one write order, and the order is load-bearing:
+**[VERIFIED]** Apply and restore are one bounded convergence loop, not a single write pass. The shell applies and reloads these settings asynchronously, so the observable outcome is re-read and only the diverging values are re-asserted:
 
 ```text
-1. SystemParametersInfo per-effect writes, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE
-2. discrete registry values
-3. UserPreferencesMask verbatim, LAST, so no SPI write can clobber unattributed bits
-4. WM_SETTINGCHANGE broadcast
+repeat up to 4 times:
+    1. per-effect SystemParametersInfo writes, SPIF_SENDCHANGE only   -> live session
+    2. discrete registry values, except the preset label              -> persistence
+    3. UserPreferencesMask, one whole-blob write                      -> persistence
+    4. settle, then VisualFXSetting alone                             -> preset label
+    5. re-read; if it matches the target, broadcast once and stop
+       otherwise narrow the next pass to the values still diverging
+on exhaustion: report failure WITH the residual difference, never success
 ```
+
+Three measured mechanisms force this shape:
+
+- `SPIF_UPDATEINIFILE` persists a write by read-modify-writing the shared mask byte, so consecutive writes to effects sharing a byte lose each other's bits. The flag is not used; persistence is explicit.
+- Windows re-labels the configuration as `Custom` asynchronously when effects change, so the label is written last and alone.
+- A global `WM_SETTINGCHANGE` mid-sequence makes the shell reload from the registry and undo writes that had already landed, so the broadcast happens only after the state already matches.
+
+The mask is derived from the per-effect values via the attribution table, starting from the snapshot's mask so the two unexplained bits survive. Deriving rather than storing keeps the live and persisted layers consistent by construction.
 
 **[VERIFIED]** Both operations are proven on the supported configuration: an arbitrary `Custom` state survived an apply/restore cycle with no differences, and applying Best Performance from a `Custom` start produced a state identical to the operator-produced preset, so apply is deterministic and start-state independent.
 

@@ -19,7 +19,7 @@ Status vocabulary:
 - **[PLANNED]** Required or intended behavior that has not been implemented.
 - **[UNVERIFIED]** A proposed mechanism or compatibility claim that requires evidence before hard-coding.
 - **[VERIFIED]** A platform or integration fact established by direct live observation on a real machine, recorded with its environment and scope limits. It describes how Windows or CRD actually behaves, not Remotune code.
-- **[IMPLEMENTED]** Verified in inspected code. There are no implemented claims at this baseline.
+- **[IMPLEMENTED]** Verified in inspected code, with automated tests passing.
 
 A **[VERIFIED]** fact is only as broad as the configuration it was observed on. Where a question is inherently about variation across Windows versions, locales, or hardware layouts, single-machine evidence does not close it.
 
@@ -35,13 +35,19 @@ A **[VERIFIED]** fact is only as broad as the configuration it was observed on. 
 
 ## Current truth
 
-**[DECIDED]** Remotune is approved for implementation handoff as a Windows tray-first background utility built with Wails v3, Go, and Vue. The repository contains documentation plus the Phase 0 evidence tooling in `tools/phase0/`; no application implementation exists.
+**[DECIDED]** Remotune is approved for implementation handoff as a Windows tray-first background utility built with Wails v3, Go, and Vue.
+
+**[IMPLEMENTED]** The Phase 1 Windows adapter layer exists as a standalone Go module at `engine/` (module `github.com/khiemnguyen/remotune/engine`, Go 1.26.1, dependency only on `golang.org/x/sys`, **no Wails dependency**), verified by an automated test suite passing five consecutive clean runs. It implements `VisualEffectsManager` and `TaskbarManager` with a three-layer Visual Effects snapshot, a transformation-based apply, and a bounded convergence loop that re-verifies the observed outcome instead of trusting a write. Full detail is in [Phase 1 implementation](remotune.roadmap.md#phase-1--windows-tuning-engine). The module is deliberately kept separate from Wails so it can be migrated by file move plus import-path rewrite once Phase 4 generates the canonical Wails project (decision 52 in the [ledger](remotune.hallucination.md#decisions-closed-by-phase-0-evidence)).
+
+The remaining repository content is documentation plus the Phase 0 evidence tooling in `tools/phase0/`. The CRD detector (Phase 2), the coordinator and durable recovery store (Phase 3), and the Wails shell (Phase 4) do not exist yet.
 
 **[VERIFIED]** A Phase 0 evidence spike ran on 2026-08-14 against the real Controlled machine (Windows 11 Pro 23H2 build 22631.6494, CRD host 152.0.7977.9, non-elevated user) and is substantially complete. CRD detection, the Windows tuning value model, apply and restore including an exact arbitrary-`Custom` round-trip, taskbar control, and the Wails/WebView2 prerequisites are all evidence-backed. Remaining gaps are environment coverage rather than unknown mechanisms: Windows 10, multi-monitor and secondary taskbars, and Explorer-restart reconciliation. Full observations and scope limits are in [Phase 0 recorded evidence](remotune.roadmap.md#phase-0-recorded-evidence).
 
 **[VERIFIED]** The core invariant is demonstrated rather than merely intended: arbitrary `Custom`, `Let Windows choose`, `Best Appearance`, and already-`Best Performance` baselines each survived an apply/restore cycle with no differences, and a taskbar baseline of auto-hide OFF was preserved rather than forced ON.
 
 **[VERIFIED]** Closing those cases also exposed a defect that would otherwise have shipped as an intermittent bug: a taskbar override applied only through `ABM_SETSTATE` is not durable, because the live state can diverge from what Explorer persists and later revert on its own. The fix is to write both the live and persisted layers on every change.
+
+**[VERIFIED]** Porting the PowerShell reference to Go and running the resulting suite repeatedly showed that the reference sequence was **racy rather than correct**: it had appeared stable only because it was not exercised across enough runs. Three measured mechanisms forced a different write sequence, recorded as decisions 58 to 62 in the ledger, and two of the author's own intermediate conclusions were themselves wrong and are retracted there as decisions 63 and 64. The lesson generalizes past Visual Effects: a single passing run is not evidence of correctness for any Windows setting the shell reloads asynchronously, and the practice of verifying the observed outcome rather than trusting a write, already required by the product's reliability order, is what caught this.
 
 **[DECIDED]** Remotune runs on the **Controlled machine** (currently the user's home machine), where Windows settings and the CRD host exist. The **Controlling machine** is currently the user's work machine. Chrome Remote Desktop (CRD) is the initial remote-session provider and trigger.
 
@@ -251,3 +257,5 @@ When choosing between more features and more reliability, choose reliability. Wh
 This pack was initialized on 2026-08-14 from an approved project proposal last consolidated on 2026-08-13, then standalone-normalized on 2026-08-14. The historical input is archived and non-authoritative. All normative content needed for implementation and resume now lives in the domain documents above. The originally inspected code reference was `73f49b65063eacf9953d40d324c9c61e3b4e64eb`.
 
 Updated on 2026-08-14 to record the Phase 0 evidence spike. Code state at that point was commit `1d8c9e2d6419125d1b8020249b4bd870394ecfd1` plus uncommitted additions under `tools/phase0/`, so `code_ref` is recorded as `uncommitted`. The spike introduced the **[VERIFIED]** status token and resolved a substantial part of the [uncertainty ledger](remotune.hallucination.md); no product decision or boundary was changed by it.
+
+Updated again on 2026-08-14 to record the Phase 1 Go implementation of the Windows adapter layer, and to introduce the **[IMPLEMENTED]** status token as an active claim rather than a placeholder. Code state was commit `ec82796325797a5675c6cdd150e503f0d415d109` plus the uncommitted `engine/` module, so `code_ref` remains `uncommitted`. No product decision or boundary changed; the write-sequence mechanisms discovered during the port refined *how* the already-decided invariant is achieved, not *what* Remotune is required to do.

@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-14T10:11:13.7627145+07:00",
+  "machine": "THEKHIEM7-TUF",
+  "osBuild": "10.0.22631.0 UBR=6494",
+  "spi": {
+    "DragFullWindows": 1,
+    "FontSmoothing": 1,
+    "MenuAnimation": 1,
+    "ComboBoxAnimation": 1,
+    "ListBoxSmoothScrolling": 1,
+    "GradientCaptions": 1,
+    "KeyboardCues": 0,
+    "HotTracking": 1,
+    "MenuFade": 1,
+    "SelectionFade": 1,
+    "TooltipAnimation": 1,
+    "TooltipFade": 1,
+    "CursorShadow": 1,
+    "FlatMenu": 1,
+    "DropShadow": 1,
+    "UIEffects": 1,
+    "ClientAreaAnimation": 1,
+    "MinAnimate": 1
+  },
+  "registry": {
+    "VisualFXSetting": 1,
+    "UserPreferencesMask": "0x9E3E078012000000",
+    "Desktop.DragFullWindows": "1",
+    "Desktop.FontSmoothing": "2",
+    "Desktop.FontSmoothingType": 2,
+    "Desktop.MenuShowDelay": "400",
+    "WindowMetrics.MinAnimate": "1",
+    "Advanced.ListviewAlphaSelect": 1,
+    "Advanced.ListviewShadow": 1,
+    "Advanced.TaskbarAnimations": 1,
+    "Advanced.IconsOnly": 0,
+    "Advanced.ShowTaskViewButton": null,
+    "DWM.EnableAeroPeek": 1,
+    "DWM.AlwaysHibernateThumbnails": 1,
+    "DWM.Composition": 1
+  },
+  "visualFxSub": {
+    "AnimateMinMax": 1,
+    "ComboBoxAnimation": 1,
+    "ControlAnimations": 1,
+    "CursorShadow": 1,
+    "DragFullWindows": 1,
+    "DropShadow": 1,
+    "DWMAeroPeekEnabled": 1,
+    "DWMEnabled": 1,
+    "DWMSaveThumbnailEnabled": 1,
+    "FontSmoothing": null,
+    "ListBoxSmoothScrolling": 1,
+    "ListviewAlphaSelect": 1,
+    "ListviewShadow": 1,
+    "MenuAnimation": 1,
+    "SelectionFade": 1,
+    "TaskbarAnimations": 1,
+    "Themes": 1,
+    "ThumbnailsOrIcon": 1,
+    "TooltipAnimation": 1
+  },
+  "dwmComposition": true,
+  "taskbar": {
+    "abmState": 0,
+    "absAutoHide": false,
+    "absAlwaysOnTop": false,
+    "otherBits": 0,
+    "taskbarRect": "3:0,1026,1920,1080"
+  },
+  "screens": [
+    {
+      "device": "\\\\.\\DISPLAY1",
+      "primary": true,
+      "bounds": "{X=0,Y=0,Width=1920,Height=1080}",
+      "workArea": "{X=0,Y=0,Width=1920,Height=1026}"
+    }
+  ]
+}
