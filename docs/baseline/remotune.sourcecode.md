@@ -4,7 +4,7 @@ pack: "remotune"
 document: "sourcecode"
 status: "active"
 updated: "2026-08-14"
-code_ref: "2b96ec90e9d73889291a45f9ce2508d344308aa0"
+code_ref: "7dbec692540aa13e0347b3deedc4cdb21a168eb8"
 ---
 
 # Remotune Planned Source Architecture
@@ -255,7 +255,9 @@ The old objection that `StuckRects3` needs an Explorer restart does not apply: `
 
 ### Persistence
 
-The active recovery snapshot must be durable before any system mutation. Candidate storage is `%LOCALAPPDATA%\Remotune\`, potentially containing `config.json`, `state.json`, and `logs\`.
+**[IMPLEMENTED]** `engine/internal/application.RecoveryStore`, at `%LOCALAPPDATA%\Remotune\recovery.json` (resolved via `os.UserCacheDir`, overridable for tests). One file, not per-category, because ownership is a single unit: a duplicate connect must not be able to replace one category's baseline while leaving another's stale (ledger decision 14).
+
+**[VERIFIED]** `Save` is atomic: it writes to a temp file in the same directory (guaranteeing a same-volume, and therefore atomic, `os.Rename`) and only renames over the target after the write and an `fsync` succeed. `Load` collapses a missing file, a corrupt (non-JSON) file, and a file with a mismatched `SchemaVersion` into the single `ErrNoRecovery` sentinel, so a caller cannot mistake a corrupt-but-present file for valid ownership (ledger decision 75). The remaining candidate contents, `config.json` and `logs\`, are not yet implemented.
 
 Conceptual, not final, snapshot. The shape below reflects Phase 0 evidence: the mask is stored verbatim as an opaque blob, per-effect values are stored as read through `SystemParametersInfo`, and the taskbar stores the whole appbar state rather than just a boolean so unrelated bits can be restored.
 
@@ -298,7 +300,7 @@ Required properties:
 
 ### StateCoordinator
 
-**[DECIDED]** One coordinator owns all state transitions. Detector callbacks, Vue handlers, tray callbacks, startup, and recovery code submit observations/commands; they do not call Windows managers directly.
+**[IMPLEMENTED]** `engine/internal/application.Coordinator`. One coordinator owns all state transitions. Detector callbacks, Vue handlers, tray callbacks, startup, and recovery code submit observations/commands; they do not call Windows managers directly.
 
 Desired state is derived from:
 
@@ -310,7 +312,11 @@ observed CRD state
 = desired Windows state
 ```
 
-The coordinator serializes transitions using one worker/event loop. There are no concurrent Visual Effects or taskbar writes. If disconnect arrives while apply is running, the latest desired state eventually wins after serialized reconciliation.
+**[VERIFIED]** The coordinator serializes transitions using one `sync.Mutex` around every exported method, not a separate worker/event loop with a queue: a call arriving while another is in flight blocks until it finishes, then reconciles against whatever is now current. There are no concurrent Visual Effects or taskbar writes. If disconnect arrives while apply is running, the latest desired state eventually wins after serialized reconciliation, verified by a test firing 50 concurrent calls across 8 consecutive clean runs (`go test -race` was unavailable on the evidence machine; see ledger decision 76).
+
+**[VERIFIED]** `VisualEffectsAdapter`, `TaskbarAdapter`, `Bootstrapper`, and `Subscription` are declared as coordinator-local interfaces satisfied by the real `wintune`/`crd` types, rather than the coordinator depending on those concrete types. This is what let 29 coordinator tests run fast and repeatably against fakes without mutating the operator's real desktop on every run, extending the same lesson Phase 1 learned about needing non-mutating test cycles.
+
+**[UNVERIFIED]** The coordinator has not yet been run end-to-end against the real `wintune`/`crd` adapters; each adapter is independently proven on real hardware (Phase 1/2), and the coordinator's decision logic is proven against fakes (Phase 3), but the full chain together is not yet exercised.
 
 ## State model
 

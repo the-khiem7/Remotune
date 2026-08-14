@@ -4,14 +4,14 @@ pack: "remotune"
 document: "roadmap"
 status: "active"
 updated: "2026-08-14"
-code_ref: "uncommitted"
+code_ref: "7dbec692540aa13e0347b3deedc4cdb21a168eb8"
 ---
 
 # Remotune Implementation Roadmap
 
 ## Current checkpoint
 
-**[DECIDED]** Product direction is approved. **[IMPLEMENTED]** Phase 1 (Windows tuning adapters) and Phase 2 (CRD detector) both exist in the standalone `engine/` Go module, verified against real Windows state and a real, live CRD session respectively. **[PLANNED]** The coordinator and durable recovery store (Phase 3) and Wails shell (Phase 4) do not exist yet. The repository also contains documentation and the Phase 0 evidence tooling under `tools/phase0/`.
+**[DECIDED]** Product direction is approved. **[IMPLEMENTED]** Phase 1 (Windows tuning adapters), Phase 2 (CRD detector), and Phase 3 (StateCoordinator and durable recovery) all exist in the standalone `engine/` Go module. Phase 1 and 2 are verified against real Windows state and a real, live CRD session respectively; Phase 3 is verified against fakes with 29 passing tests but not yet end-to-end against the real adapters. **[PLANNED]** The Wails shell (Phase 4) does not exist yet. The repository also contains documentation and the Phase 0 evidence tooling under `tools/phase0/`.
 
 **[VERIFIED]** A Phase 0 evidence spike was executed on 2026-08-14 on the actual Controlled machine and is now substantially complete. All four areas are closed with reproducible live evidence recorded in [Phase 0 recorded evidence](#phase-0-recorded-evidence), including the exact 22-value set that `Adjust for best performance` changes and a passing arbitrary-`Custom` round-trip. Remaining gaps are environment coverage only: Windows 10, multi-monitor and secondary taskbars, Explorer-restart reconciliation, and the Wails runtime APIs that require the pinned project to exist.
 
@@ -447,16 +447,31 @@ Two permanent regression tests (`TestSubscribeReplaysFromMidHistoryBookmark`, `T
 
 ## Phase 3 — Coordinator and recovery
 
-**Status:** **[PLANNED]**; depends on Phases 1 and 2.
+**Status:** **[IMPLEMENTED]**, 2026-08-14. Implemented in `engine/internal/application`, same standalone module as Phases 1 and 2, no Wails dependency.
 
 ### Deliverables
 
-- one serialized `StateCoordinator` transition loop;
-- desired-state derivation from observed CRD state, automation state, enabled categories, and persisted ownership;
-- durable apply and restore transactions;
-- idempotency, race handling, latest-desired-state reconciliation;
-- crash/startup recovery and `Restore Now`;
-- explicit `Unknown`, `Partial/Error`, and `Recovery Required` states.
+| Unit | State |
+|---|---|
+| `state.go` | `TuningState` enum, pure, no build tag: `Unknown / Baseline / Applying / Active / Restoring / Partial-Error / Recovery Required`, plus `CanApply` / `CanRestore` / `IsTransient` |
+| `recovery.go` | `RecoveryStore`: atomic durable persistence (temp file same directory + `os.Rename`, atomic on NTFS), `Load` folds missing/corrupt/schema-mismatched files into one `ErrNoRecovery`, `Retire`, `Exists` |
+| `coordinator.go` | `Coordinator`: one `sync.Mutex` serializing every method (`Bootstrap`, `Observe`, `Pause`, `Resume`, `RestoreNow`, `Quit`, `Status`); `desiredOwned()` desired-state formula; `applyLocked` / `restoreLocked` transaction flows |
+| `startup.go` | `Run`: bootstrap → `Coordinator.Bootstrap` → subscribe from the bootstrap's own bookmark → poll loop feeding `crd.Reconstruct` incrementally |
+
+- one serialized `StateCoordinator` transition loop — **[VERIFIED]**, a single mutex around every method; there is no separate queue, and none is needed;
+- desired-state derivation from observed CRD state, automation state, enabled categories, and persisted ownership — **[VERIFIED]**, `desiredOwned()`;
+- durable apply and restore transactions — **[VERIFIED]**, see gates below;
+- idempotency, race handling, latest-desired-state reconciliation — **[VERIFIED]**, see [Phase 3 recorded evidence](#phase-3-recorded-evidence);
+- crash/startup recovery and `Restore Now` — **[VERIFIED]**;
+- explicit `Unknown`, `Partial/Error`, and `Recovery Required` states — **[VERIFIED]**, plus a distinction the baseline did not originally separate (see below).
+
+`VisualEffectsAdapter`, `TaskbarAdapter`, and `Bootstrapper`/`Subscription` are declared as local interfaces satisfied by the real `wintune`/`crd` types, rather than depending on those concrete types directly. This exists so coordinator *decisions* can be tested with fakes, fast and repeatably, without mutating the operator's real desktop on every test run — extending the Phase 1 lesson that adapter correctness and coordinator-logic correctness need different kinds of tests.
+
+**[DECIDED]** A restore that verifies successfully but whose durable cleanup (`RecoveryStore.Retire`) fails is `Recovery Required`, not `Partial/Error`. The two are kept distinct because they mean different things to an operator: `Partial/Error` means Windows itself is not fully in the desired state; this case means Windows **is** correctly restored and only the durable record of that could not be deleted. Reporting it as `Partial/Error` would incorrectly imply Windows is left inconsistent.
+
+**[DECIDED]** `Pause` always sets `Paused = true`, even when the restore it triggers is itself partial. Pausing is a deliberate operator command to stop automation; it must be recorded as having happened, with the restore's own failure remaining separately visible through `Status().Tuning`.
+
+**[DECIDED]** `Quit` is idempotent and, once begun, makes `Observe`, `Pause`, and `Resume` return `ErrShuttingDown` rather than accepting further *automatic* transitions — matching the baseline's "stop accepting new automatic transitions." `RestoreNow` is deliberately exempt from this guard: if `Quit`'s own restore attempt ends in `Partial/Error`, an operator or a subsequent retry path must still be able to invoke `RestoreNow` afterward.
 
 ### Apply verification gate
 
@@ -469,7 +484,7 @@ read complete baselines
 → mark ownership/Active only as justified
 ```
 
-A partial failure must remain `Partial/Error`, retain recovery data, and never be shown as complete success.
+A partial failure must remain `Partial/Error`, retain recovery data, and never be shown as complete success. **[VERIFIED]** by `TestApplyPersistsSnapshotBeforeMutating` and `TestPartialApplyRetainsSnapshotAndReportsPartialError`.
 
 ### Restore verification gate
 
@@ -482,7 +497,42 @@ load valid owned snapshot
 → state Baseline
 ```
 
-No valid owned snapshot means no guessed restoration.
+No valid owned snapshot means no guessed restoration. **[VERIFIED]** by `TestRestoreNowRefusesWithNoOwnedSnapshot`, `TestRestoreRetiresSnapshotOnlyOnFullSuccess`, and `TestPartialRestoreRetainsSnapshot`.
+
+### Phase 3 recorded evidence
+
+**[VERIFIED]** 29 tests in `engine/internal/application`, all passing across 8 consecutive clean runs (`go test ./internal/application -count=1`, repeated per the Phase 1 lesson that a single passing run is not evidence for logic with concurrency or asynchronous dependents). `go test -race` is unavailable on the evidence machine (no cgo/gcc toolchain), so concurrency claims below rest on repeated-run stability and explicit serialization tests, not on the race detector.
+
+Gate coverage, by baseline requirement:
+
+| Requirement | Test | Result |
+|---|---|---|
+| Snapshot persisted before mutation | `TestApplyPersistsSnapshotBeforeMutating` | PASS |
+| Duplicate connect does not replace baseline | `TestRepeatedApplyDoesNotReplaceOriginalBaseline` | PASS |
+| Partial apply retains snapshot, reports Partial/Error | `TestPartialApplyRetainsSnapshotAndReportsPartialError` | PASS |
+| No categories enabled stays Baseline, nothing persisted | `TestApplyWithNoCategoriesEnabledStaysBaseline` | PASS |
+| Restore Now refuses with no owned snapshot | `TestRestoreNowRefusesWithNoOwnedSnapshot` | PASS |
+| Snapshot retired only on verified full restore | `TestRestoreRetiresSnapshotOnlyOnFullSuccess` | PASS |
+| Partial restore retains snapshot for retry | `TestPartialRestoreRetainsSnapshot` | PASS |
+| Repeated restore after Baseline is a no-op | `TestRepeatedRestoreAfterSuccessIsNoOp` | PASS |
+| Pause restores owned state and sets Paused | `TestPauseRestoresOwnedStateAndSetsPaused` | PASS |
+| Pause sets Paused even on a partial restore | `TestPauseSetsPausedEvenIfRestoreIsPartial` | PASS |
+| Resume re-applies if still Connected | `TestResumeReappliesWhenStillConnected` | PASS |
+| Quit restores owned state; idempotent | `TestQuitRestoresOwnedStateAndIsIdempotent` | PASS |
+| Quit rejects new automatic observations | `TestQuitRejectsNewObservations` | PASS |
+| No ownership record ⇒ Baseline regardless of observed Windows state (decision 13) | `TestBootstrapNoOwnershipIsBaselineRegardlessOfCurrentWindowsState` | PASS |
+| Bootstrap with ownership + still Connected reconciles without replacing baseline | `TestBootstrapWithOwnershipStillConnectedReconciliesWithoutReplacingBaseline` | PASS |
+| Bootstrap with ownership + Disconnected restores | `TestBootstrapWithOwnershipDisconnectedRestores` | PASS |
+| 50 concurrent `Observe` calls serialize without corruption; deterministic settle | `TestConcurrentObservationsAreSerializedAndLatestWins` | PASS |
+| Connect-then-disconnect-during-apply scenario (critical scenario gate) | `TestDisconnectDuringApplyReconcilesToRestored` | PASS |
+| `Status()` remains responsive, does not deadlock | `TestStatusDoesNotBlockDuringLongRunningTransition` | PASS |
+| `Run` applies at bootstrap and restores on a live-subscription disconnect | `TestRunAppliesOnBootstrapAndRestoresOnLiveDisconnect` | PASS |
+| `RecoveryStore` save/load/retire, atomic overwrite, corrupt/schema-mismatch rejection | 7 tests in `recovery_test.go` | PASS |
+| `TuningState` string/transient/CanApply/CanRestore | 3 tests in `state_test.go` | PASS |
+
+**[VERIFIED]** Operator machine confirmed untouched after the full suite: `VisualFXSetting=1`, mask `9E 3E 07 80 12 00 00 00`, taskbar live/persisted both `true`/agreed, and `%LOCALAPPDATA%\Remotune\` does not exist — every test used an isolated `t.TempDir()`, never the real recovery path.
+
+**[UNVERIFIED]**, deferred: this phase has not been exercised against the *real* `wintune`/`crd` adapters end-to-end (only against fakes, plus each adapter's own Phase 1/2 real-machine tests independently). A real end-to-end run — actual CRD connect/disconnect driving actual Visual Effects/taskbar apply/restore through the coordinator — belongs to Phase 4/6 once a long-running process exists to host it.
 
 ## Phase 4 — Wails tray shell
 
@@ -619,18 +669,17 @@ Closing the window leaves automation running; explicit Quit restores owned Windo
 
 ## Exact next action
 
-Phase 1 and Phase 2 are both implemented and verified, including one live CRD disconnect/reconnect cycle that found and fixed a real `EvtSubscribe` signaling defect (ledger decisions 66-69). Both live in the standalone `engine/` Go module with no Wails dependency.
+Phases 1, 2, and 3 are all implemented in the standalone `engine/` Go module with no Wails dependency. Phase 3 is verified against fakes (29 tests, 8 consecutive clean runs) but not yet against the real adapters end-to-end.
 
 ```text
-1. close remaining Phase 1 work: the durable snapshot store (belongs with Phase 3 recovery data)
-2. begin Phase 3 (StateCoordinator): serialize transitions, derive desired state from
-   crd.Snapshot + automation config + persisted ownership, wire wintune.VisualEffectsManager
-   and wintune.TaskbarManager as the apply/restore targets
-3. wire crd.Bootstrap + a long-running crd.Subscription into the coordinator's startup path
-4. wire detector failures (currently Go error returns) into the coordinator's health/diagnostics
+1. close the Phase 3 real-adapter gap: wire engine/internal/application.Coordinator to the
+   REAL wintune.VisualEffectsManager and wintune.TaskbarManager (satisfying the local
+   VisualEffectsAdapter/TaskbarAdapter interfaces already needs no code change on their
+   side) and to crd.LiveDetector, then run at least one real apply/restore cycle end-to-end
+2. wire detector failures (currently Go error returns) into the coordinator's health/diagnostics
    surface, and add Event Log rotation/clear fallback (both deferred from Phase 2 to Phase 3/6)
-5. only after Phase 3 is stable: scaffold the pinned Wails project (v3.0.0-beta.8)
-   and migrate the engine/ packages into it per decision 52
+3. only after the real end-to-end run is verified: scaffold the pinned Wails project
+   (v3.0.0-beta.8) and migrate the engine/ packages into it per decision 52
 ```
 
-Treat `engine/internal/wintune` and `engine/internal/crd` as the behavioural reference; the PowerShell tools under `tools/phase0/` are superseded evidence artifacts, not live specifications. Do not claim Windows 10, multi-monitor, secondary-taskbar, or multi-client-CRD support until those configurations are actually observed.
+Treat `engine/internal/wintune`, `engine/internal/crd`, and `engine/internal/application` as the behavioural reference; the PowerShell tools under `tools/phase0/` are superseded evidence artifacts, not live specifications. Do not claim Windows 10, multi-monitor, secondary-taskbar, or multi-client-CRD support until those configurations are actually observed.

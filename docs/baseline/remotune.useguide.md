@@ -4,7 +4,7 @@ pack: "remotune"
 document: "useguide"
 status: "active"
 updated: "2026-08-14"
-code_ref: "2b96ec90e9d73889291a45f9ce2508d344308aa0"
+code_ref: "7dbec692540aa13e0347b3deedc4cdb21a168eb8"
 ---
 
 # Remotune Planned Use and Behavior Contract
