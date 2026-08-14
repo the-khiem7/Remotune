@@ -4,7 +4,7 @@ pack: "remotune"
 document: "useguide"
 status: "active"
 updated: "2026-08-14"
-code_ref: "73f49b65063eacf9953d40d324c9c61e3b4e64eb"
+code_ref: "uncommitted"
 ---
 
 # Remotune Planned Use and Behavior Contract
@@ -36,9 +36,9 @@ CRD disconnects
 
 ## Install and first run
 
-**[PLANNED]** The primary package is a portable `Remotune.exe`. WebView2 is a required Windows runtime dependency because the UI uses Wails. If WebView2 is unavailable, Remotune must explain the missing prerequisite rather than fail silently.
+**[PLANNED]** The primary package is a portable `Remotune.exe`. WebView2 is a required Windows runtime dependency because the UI uses Wails. If WebView2 is unavailable, Remotune must explain the missing prerequisite rather than fail silently. **[VERIFIED]** Presence can be detected without elevation by reading the WebView2 EdgeUpdate client key; the absent-runtime failure path itself is **[UNVERIFIED]** because the evidence machine has the runtime installed.
 
-**[PLANNED]** Normal operation should not require running the entire app as Administrator. Any target-system permission incompatibility must be reported deliberately.
+**[VERIFIED]** Normal operation does not require Administrator for the integrations exercised so far: reading CRD events, subscribing to them in real time, reading Visual Effects state, and reading and writing taskbar auto-hide all succeeded as a standard non-elevated user. **[PLANNED]** Any target-system permission incompatibility must still be reported deliberately.
 
 **[PLANNED]** Enabling `Start with Windows` registers the executable's current path. Moving or deleting the portable executable can break that registration; Remotune must handle or document this clearly.
 

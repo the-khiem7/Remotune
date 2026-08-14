@@ -4,7 +4,7 @@ pack: "remotune"
 document: "introduction"
 status: "active"
 updated: "2026-08-14"
-code_ref: "73f49b65063eacf9953d40d324c9c61e3b4e64eb"
+code_ref: "uncommitted"
 ---
 
 # Remotune Baseline Introduction
@@ -18,7 +18,10 @@ Status vocabulary:
 - **[DECIDED]** Approved product or engineering direction.
 - **[PLANNED]** Required or intended behavior that has not been implemented.
 - **[UNVERIFIED]** A proposed mechanism or compatibility claim that requires evidence before hard-coding.
+- **[VERIFIED]** A platform or integration fact established by direct live observation on a real machine, recorded with its environment and scope limits. It describes how Windows or CRD actually behaves, not Remotune code.
 - **[IMPLEMENTED]** Verified in inspected code. There are no implemented claims at this baseline.
+
+A **[VERIFIED]** fact is only as broad as the configuration it was observed on. Where a question is inherently about variation across Windows versions, locales, or hardware layouts, single-machine evidence does not close it.
 
 **[DECIDED]** When documents appear to overlap, responsibility is resolved as follows:
 
@@ -32,7 +35,9 @@ Status vocabulary:
 
 ## Current truth
 
-**[DECIDED]** Remotune is approved for implementation handoff as a Windows tray-first background utility built with Wails v3, Go, and Vue. The inspected repository contains documentation only; no application implementation exists.
+**[DECIDED]** Remotune is approved for implementation handoff as a Windows tray-first background utility built with Wails v3, Go, and Vue. The repository contains documentation plus the Phase 0 evidence tooling in `tools/phase0/`; no application implementation exists.
+
+**[VERIFIED]** A Phase 0 evidence spike ran on 2026-08-14 against the real Controlled machine (Windows 11 Pro 23H2 build 22631.6494, CRD host 152.0.7977.9, non-elevated user). CRD detection, taskbar control, and the Wails/WebView2 prerequisites are now evidence-backed; the Visual Effects preset diff and the arbitrary `Custom` round-trip proof remain open. Full observations, scope limits, and the exact continuation point are in [Phase 0 recorded evidence](remotune.roadmap.md#phase-0-recorded-evidence).
 
 **[DECIDED]** Remotune runs on the **Controlled machine** (currently the user's home machine), where Windows settings and the CRD host exist. The **Controlling machine** is currently the user's work machine. Chrome Remote Desktop (CRD) is the initial remote-session provider and trigger.
 
@@ -148,12 +153,14 @@ A user may begin in Best Appearance, Best Performance, Let Windows choose, or an
 
 Reliable connection detection is the most important technical component: unreliable detection makes every automation transition unreliable.
 
-- **[PLANNED]** Use CRD connect/disconnect evidence in Windows Event Log as the primary source of truth.
-- **[DECIDED]** CRD host process presence does not prove an active client session.
+- **[VERIFIED]** Use CRD connect/disconnect evidence in Windows Event Log as the primary source of truth. The provider is `chromoting` on the `Application` channel, with event 1 for connect and event 2 for disconnect.
+- **[VERIFIED]** CRD host process presence does not prove an active client session. The service was observed `RUNNING` with two live host processes and no connected client.
 - **[DECIDED]** Service state, sockets, network traffic, and CPU activity are weaker signals and may be diagnostics only, not primary connection truth.
 - **[PLANNED]** At startup, load persisted state, reconstruct CRD state from historical events, subscribe to future events, and reconcile desired Windows state.
-- **[PLANNED]** Handle duplicate and delayed transitions, quick connect/disconnect, start while connected/disconnected, subscription failure, Event Log rotation/clear, stale bookmarks if used, CRD host/service restart, and delayed callbacks.
-- **[UNVERIFIED]** Do not assume any disconnect means zero clients until actual CRD multiple-client behavior is established.
+- **[VERIFIED]** The startup handover uses a bookmark: subscribe starting after the last event consumed by the historical query so no transition is lost between the two phases.
+- **[VERIFIED]** Connect and disconnect events do not reliably alternate. A disconnect is genuinely lost when the CRD host process dies, so state reconstruction is scoped to the current host process lifetime and a dangling connect from a dead process is treated as disconnected.
+- **[PLANNED]** Handle duplicate and delayed transitions, quick connect/disconnect, start while connected/disconnected, subscription failure, Event Log rotation/clear, stale bookmarks, CRD host/service restart, and delayed callbacks.
+- **[UNVERIFIED]** Do not assume any disconnect means zero clients. No overlapping sessions appeared in the observed sample, which narrows but does not close the question, so an active-client set keyed by the per-session identifier remains the required model.
 
 ### Windows state preservation
 
@@ -205,6 +212,8 @@ Wails is selected because Go fits Windows-native integration and compiled distri
 
 Wails v3 is selected over v2 because this product benefits directly from first-class system tray support, background utility lifecycle, autostart management, and the improved application/window model. Its Beta status is accepted for this new project, but an explicit version must be pinned and upgrades tested intentionally rather than floated uncontrolled.
 
+**[DECIDED]** The pinned version is **v3.0.0-beta.8** (published 2026-08-12). **[VERIFIED]** WebView2 presence is detectable without elevation via its EdgeUpdate client key, and the evidence machine already carries the runtime, Go 1.26.1, and Node v24.13.1. The `wails3` CLI is not yet installed, and the framework's tray, lifecycle, and autostart APIs have not been exercised.
+
 - **[PLANNED]** Primary distribution is a portable `Remotune.exe` without requiring a traditional installer for the basic use case.
 - **[DECIDED]** Wails uses WebView2 on Windows. “Single executable” does not mean “zero OS runtime dependencies”; document the requirement and fail clearly when it is unavailable.
 - **[PLANNED]** Prefer normal-user operation. Verify Event Log, Visual Effects, taskbar, and autostart permissions rather than elevating the whole app by default.
@@ -235,4 +244,6 @@ When choosing between more features and more reliability, choose reliability. Wh
 
 ## Normalization provenance
 
-This pack was initialized on 2026-08-14 from an approved project proposal last consolidated on 2026-08-13, then standalone-normalized on 2026-08-14. The historical input is archived and non-authoritative. All normative content needed for implementation and resume now lives in the domain documents above. The inspected code reference was `73f49b65063eacf9953d40d324c9c61e3b4e64eb`.
+This pack was initialized on 2026-08-14 from an approved project proposal last consolidated on 2026-08-13, then standalone-normalized on 2026-08-14. The historical input is archived and non-authoritative. All normative content needed for implementation and resume now lives in the domain documents above. The originally inspected code reference was `73f49b65063eacf9953d40d324c9c61e3b4e64eb`.
+
+Updated on 2026-08-14 to record the Phase 0 evidence spike. Code state at that point was commit `1d8c9e2d6419125d1b8020249b4bd870394ecfd1` plus uncommitted additions under `tools/phase0/`, so `code_ref` is recorded as `uncommitted`. The spike introduced the **[VERIFIED]** status token and resolved a substantial part of the [uncertainty ledger](remotune.hallucination.md); no product decision or boundary was changed by it.
