@@ -224,9 +224,22 @@ ABM_SETSTATE target
 
 **[VERIFIED]** Outcome verification does not trust the write. Comparing the primary screen work area against its bounds distinguishes the states: on the evidence machine the work-area height was 1080 with auto-hide ON and 1026 with it OFF, against a 54 px taskbar.
 
-**[DECIDED]** `StuckRects3` mirrors the auto-hide bit but requires an Explorer restart, so Remotune never writes it.
+**[VERIFIED]** `ABM_SETSTATE` alone is **not durable**. The live appbar state and the persisted `StuckRects3` `Settings` byte 8 were observed to diverge, and an override applied only through the API later reverted to the persisted value without any Remotune call. Both layers are therefore written on every change (superseding the earlier prohibition on touching `StuckRects3`):
 
-**[UNVERIFIED]** Multi-monitor and secondary-taskbar behavior, Explorer-restart interaction, and Windows 10 parity remain uncollected. Bit preservation was also only trivially exercised, since no bits beyond `ABS_AUTOHIDE` were set on the evidence machine.
+```text
+GetAutoHide()      read live ABM_GETSTATE, read persisted StuckRects3 bit 0
+                   disagreement is a health signal, not normal
+
+SetAutoHide(v)     ABM_SETSTATE  -> immediate live effect, flip only ABS_AUTOHIDE
+                   StuckRects3   -> flip only bit 0 of Settings byte 8
+                   both, always, so no divergence window exists
+```
+
+The old objection that `StuckRects3` needs an Explorer restart does not apply: `ABM_SETSTATE` supplies the live effect, and the registry write exists only to remove the divergence. A durable set was verified to survive a `WM_SETTINGCHANGE` broadcast with both layers still agreeing.
+
+**[VERIFIED]** Both baseline directions round-trip. A baseline of auto-hide OFF stayed OFF through apply and restore, and was never forced to ON.
+
+**[UNVERIFIED]** Multi-monitor and secondary-taskbar behavior, Explorer-restart interaction, and Windows 10 parity remain uncollected. Bit preservation was also only trivially exercised, since no bits beyond `ABS_AUTOHIDE` were set on the evidence machine. The precise trigger for the observed spontaneous revert was not identified; a phase-by-phase bisect of a Visual Effects apply did not reproduce it.
 
 ### Persistence
 

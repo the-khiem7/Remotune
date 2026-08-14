@@ -39,7 +39,9 @@ A **[VERIFIED]** fact is only as broad as the configuration it was observed on. 
 
 **[VERIFIED]** A Phase 0 evidence spike ran on 2026-08-14 against the real Controlled machine (Windows 11 Pro 23H2 build 22631.6494, CRD host 152.0.7977.9, non-elevated user) and is substantially complete. CRD detection, the Windows tuning value model, apply and restore including an exact arbitrary-`Custom` round-trip, taskbar control, and the Wails/WebView2 prerequisites are all evidence-backed. Remaining gaps are environment coverage rather than unknown mechanisms: Windows 10, multi-monitor and secondary taskbars, and Explorer-restart reconciliation. Full observations and scope limits are in [Phase 0 recorded evidence](remotune.roadmap.md#phase-0-recorded-evidence).
 
-**[VERIFIED]** The core invariant is now demonstrated rather than merely intended: an arbitrary `Custom` Visual Effects state survived an apply/restore cycle with no differences, including a `UserPreferencesMask` bit that maps to no documented effect and would have been lost by a snapshot limited to known settings.
+**[VERIFIED]** The core invariant is demonstrated rather than merely intended: arbitrary `Custom`, `Let Windows choose`, `Best Appearance`, and already-`Best Performance` baselines each survived an apply/restore cycle with no differences, and a taskbar baseline of auto-hide OFF was preserved rather than forced ON.
+
+**[VERIFIED]** Closing those cases also exposed a defect that would otherwise have shipped as an intermittent bug: a taskbar override applied only through `ABM_SETSTATE` is not durable, because the live state can diverge from what Explorer persists and later revert on its own. The fix is to write both the live and persisted layers on every change.
 
 **[DECIDED]** Remotune runs on the **Controlled machine** (currently the user's home machine), where Windows settings and the CRD host exist. The **Controlling machine** is currently the user's work machine. Chrome Remote Desktop (CRD) is the initial remote-session provider and trigger.
 

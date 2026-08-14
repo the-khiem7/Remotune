@@ -150,7 +150,27 @@ Changes take effect immediately, settle within roughly 1.2 s, and require no Exp
 
 **[VERIFIED]** A practical verification signal exists for the apply/restore gates: the primary screen work-area height was 1080 with auto-hide ON and 1026 with it OFF, against a 1080 bounds height and a 54 px taskbar rect (`edge=BOTTOM`, `rc=(0,1026)-(1920,1080)`). Comparing work area against bounds confirms the real outcome instead of trusting the write.
 
-**[DECIDED]** `StuckRects3` `Settings` byte 8 mirrors the auto-hide bit but requires an Explorer restart to take effect. Remotune uses `ABM_SETSTATE` and does not write `StuckRects3`.
+#### Durability of the taskbar override
+
+**[VERIFIED] This supersedes the earlier decision to never write `StuckRects3`.**
+
+A taskbar override applied only through `ABM_SETSTATE` is **not durable**. The live appbar state and the persisted `StuckRects3` `Settings` byte 8 were observed to diverge: `ABM_GETSTATE` reported auto-hide ON while the persisted bit read OFF. The override was later observed to revert to the persisted value on its own, turning auto-hide off without any Remotune call.
+
+```text
+ABM_SETSTATE          -> changes the LIVE state immediately
+StuckRects3 byte 8    -> what Explorer persists and can reconcile back from
+divergence between them = a window in which the override silently disappears
+```
+
+Scope of the claim, stated precisely: the divergence is **reproducible on demand**, and one spontaneous revert was observed. A bisect over the individual phases of a Visual Effects apply — the SPI batch, the `Explorer\Advanced` writes, `WindowMetrics` and `TraySettings` broadcasts, and the DWM plus mask writes — **failed to reproduce** the revert, so no single trigger is identified and the timing appears asynchronous. Treating it as a durability defect rather than hunting the trigger is the safer engineering response.
+
+**[VERIFIED]** Writing both layers fixes it. A durable setter that issues `ABM_SETSTATE` for the live effect and writes the `StuckRects3` bit for persistence produced immediate agreement, and the override then survived a `WM_SETTINGCHANGE` broadcast with both layers still in agreement. The earlier objection that `StuckRects3` needs an Explorer restart does not apply here, because `ABM_SETSTATE` supplies the live effect while the registry write only removes the divergence.
+
+**[DECIDED]** `TaskbarManager` writes both layers on every change, snapshots both, and treats disagreement between them as a health signal rather than as normal.
+
+#### Taskbar baseline OFF
+
+**[VERIFIED]** The Phase 1 gate case missed by Phase 0 now passes. Simulating a user whose baseline is auto-hide OFF, then applying the override and restoring, left the taskbar OFF with both layers in agreement. The baseline was never forced to ON.
 
 ### Visual Effects
 
@@ -175,7 +195,9 @@ Changes take effect immediately, settle within roughly 1.2 s, and require no Exp
 
 **[VERIFIED]** `UserPreferencesMask` was observed as `9E 3E 07 80 12 00 00 00`. A bit decode cross-checked against the SPI accessors reached full agreement on 13 of 13 comparable effects, after correcting two offsets: `UIEffects` is byte 3 mask `0x80` and `ClientAreaAnimation` is byte 4 mask `0x02`. Remaining agreeing offsets are byte 0 masks `0x02`/`0x04`/`0x08`/`0x10`/`0x20`/`0x80` and byte 1 masks `0x02`/`0x04`/`0x08`/`0x10`/`0x20`.
 
-**[DECIDED]** Byte 2 (`0x07`) and byte 4 mask `0x10` were set but could not be attributed to any documented effect. Because a partially understood bitfield cannot guarantee an exact round-trip, `UserPreferencesMask` is treated as an **opaque 8-byte blob** that is snapshotted and restored verbatim, while `SystemParametersInfo` is the authoritative per-effect accessor. This preserves unattributed bits by construction.
+**[VERIFIED]** A later attribution pass toggled all 17 probed effects and resolved the mask almost completely. `FlatMenu` owns `byte[2]:0x02` and `DropShadow` owns `byte[2]:0x04`. Exactly two set bits remain unexplained: `byte[2]:0x01` and `byte[4]:0x10`. `DragFullWindows` and `FontSmoothing` own no mask bit and live only in the registry.
+
+**[DECIDED]** `UserPreferencesMask` is still treated as an **opaque 8-byte blob** that is snapshotted and restored verbatim, while `SystemParametersInfo` remains the authoritative per-effect accessor. The justification is that two bits are unexplained and preserving them verbatim costs nothing, not that any loss was observed.
 
 Supporting values captured for the snapshot schema: `DwmIsCompositionEnabled` = true; `HKCU\...\DWM` `EnableAeroPeek` = 1, `AlwaysHibernateThumbnails` = 1, `Composition` = 1; `Explorer\Advanced` `ListviewAlphaSelect` = 1, `ListviewShadow` = 1, `TaskbarAnimations` = 1, `IconsOnly` = 0; `Control Panel\Desktop` `DragFullWindows` = 1, `FontSmoothing` = 2, `FontSmoothingType` = 2, `MenuShowDelay` = 400; `WindowMetrics\MinAnimate` = 1.
 
@@ -197,7 +219,18 @@ Registry values changed: `VisualFXSetting` 1→2, `Desktop.DragFullWindows` 1→
 
 `UserPreferencesMask` moved `9E 3E 07 80 12 00 00 00` → `90 12 03 80 10 00 00 00`. Every cleared bit reconciles with the SPI results, with one exception:
 
-**[VERIFIED]** The preset clears **byte 2 mask `0x04`, which maps to no documented effect**. This is direct proof that a snapshot limited to known effects would silently lose user state, and it converts the opaque-blob decision from caution into a requirement.
+**[VERIFIED] Correction.** An earlier revision of this document claimed the preset clears a bit that maps to no documented effect, and used that as proof a known-effects-only snapshot would lose state. **That claim was wrong and is retracted.** It came from cross-checking only 13 effects and omitting `DropShadow` and `FlatMenu`. A later attribution pass toggled every probed effect and observed which bit moved:
+
+```text
+byte[2]:0x02 = FlatMenu
+byte[2]:0x04 = DropShadow      <- the bit previously misreported as unknown
+byte[2]:0x01 = still unknown
+byte[4]:0x10 = still unknown
+```
+
+Corrected position: the preset touches **only attributable bits**, so no state loss was demonstrated during a preset apply. Two bits, `byte[2]:0x01` and `byte[4]:0x10`, remain genuinely unexplained, and the preset does not touch either. Also confirmed: `DragFullWindows` and `FontSmoothing` own **no** mask bit at all and live purely in the registry, which independently confirms the three-layer model.
+
+The opaque-blob decision stands, but on the narrower and honest justification that two bits are unexplained and preserving them verbatim is free. It is not justified by a demonstrated loss.
 
 **[VERIFIED]** Three traps that a per-effect boolean model would have introduced:
 
@@ -256,18 +289,37 @@ Tooling retained: `tools/phase0/Restore-VisualState.ps1` (generic "apply this ex
 
 **Status:** **[PLANNED]**, and **unblocked**. Both halves now rest on evidence: `SHAppBarMessage` is proven for read, apply, restore, and bit preservation, and the Visual Effects value set, write order, and exact `Custom` round-trip are proven. `tools/phase0/Get-VisualState.ps1` and `tools/phase0/Restore-VisualState.ps1` are the working references to port to Go.
 
+**[DECIDED]** Phase 1 lives in a standalone Go module holding only the adapters and their tests. It does not depend on Wails, and it is expected to be migrated into the CLI-generated project in Phase 4. See decision 52 in the [ledger](remotune.hallucination.md#decisions-closed-by-phase-0-evidence).
+
 ### Deliverables
 
+- minimal standalone Go module, no Wails dependency, adapters testable headlessly;
 - `VisualEffectsManager`: `Snapshot()`, `ApplyBestPerformance()`, `Restore(snapshot)`, `GetCurrentState()`;
+- `ApplyBestPerformance()` implemented as a transformation over the known affected values, never as a replay of a captured snapshot (decision 53);
 - `TaskbarManager`: `GetAutoHide()`, `SetAutoHide(bool)` while preserving unrelated state;
-- versioned recovery snapshot schema;
-- exact capture/apply/verify/restore operations;
-- adapters isolate Win32 and any justified registry details from product logic.
+- versioned, validated recovery snapshot schema covering all three capture layers;
+- exact capture/apply/verify/restore operations, with read-back verification;
+- explicit failure model: per-category results, partial-failure reporting, and no discarding of recoverable state;
+- adapters isolate Win32 and the justified registry details from product logic.
+
+### Evidence gaps — closed
+
+Both gate cases identified after Phase 0 were exercised on 2026-08-14 and now pass. A third finding surfaced while closing them.
+
+| Case | Result |
+|---|---|
+| Taskbar baseline auto-hide **OFF** | **[VERIFIED] PASS.** Apply then restore left it OFF with both layers agreeing; never forced to ON. |
+| Baseline **Let Windows choose** (`VisualFXSetting` = 0) | **[VERIFIED] PASS.** Round-tripped with no differences and the setting returned to 0. Writing 0 did **not** make Windows recompute or overwrite effect values, so `VisualFXSetting` behaves as a label while the effect values stand on their own. |
+| Baseline already **Best Performance** | **[VERIFIED] PASS.** Apply is idempotent, a second apply changed nothing, and restore introduced no invented changes. |
+| Transformation-based apply matches the real preset | **[VERIFIED] PASS.** Applying the transformation from the Best Appearance baseline reproduced every Visual Effects value of the operator-produced preset exactly. |
+| Taskbar override durability | **[VERIFIED] defect found and fixed.** See [Durability of the taskbar override](#durability-of-the-taskbar-override). This was not on the original gate list and would have shipped as an intermittent bug. |
+
+**[UNVERIFIED]** Residual: writing `VisualFXSetting` = 0 caused no recomputation within a few seconds, but whether Windows recomputes "Let Windows choose" defaults at next logon was not observed.
 
 ### Acceptance gate
 
 - Best Performance matches the Windows Performance Options behavior.
-- A pre-existing arbitrary `Custom` configuration round-trips exactly.
+- A pre-existing arbitrary `Custom` configuration round-trips exactly, reproduced as an automated test against the Go implementation.
 - Taskbar auto-hide ON and OFF both round-trip exactly.
 - Failures are reported without discarding recoverable state.
 
@@ -339,7 +391,8 @@ No valid owned snapshot means no guessed restoration.
 
 ### Deliverables
 
-- explicitly pinned Wails v3 project;
+- project generated by the `wails3` CLI and pinned to v3.0.0-beta.8, keeping the canonical framework layout;
+- migration of the Phase 1 to Phase 3 packages into that project as a file move plus import-path rewrite, with the existing tests still passing afterwards and no adapter importing Wails;
 - application lifecycle, system tray, show/hide, close-to-tray, and background operation;
 - explicit Quit sequence that stops new transitions, serializes pending work, restores owned state, persists final state, closes subscription/handles, removes tray, and exits;
 - Start with Windows plus clear failure handling;
@@ -451,7 +504,8 @@ Closing the window leaves automation running; explicit Quit restores owned Windo
 | Lost disconnect leaves stale ownership | **[VERIFIED]** real, mitigated | Observed three times; scope replay to the current host process lifetime and treat dangling connects from a dead PID as disconnected |
 | Startup query/subscription gap | **[VERIFIED]** resolved | Subscribe from the bookmark of the last event consumed by the historical query; keep read-existing-events enabled |
 | Incomplete Visual Effects snapshot | **[VERIFIED]** resolved | 22-value set captured from the real preset; snapshot spans SPI values, discrete registry values, and the opaque mask; arbitrary `Custom` round-trip passed with no differences |
-| Silent state loss via unattributed mask bits | **[VERIFIED]** real, mitigated | The preset clears byte 2 mask `0x04`, which maps to no documented effect; the mask is written verbatim and last so the bit survives |
+| Silent state loss via unattributed mask bits | **[VERIFIED]** narrowed, mitigated | Earlier overclaim retracted: the preset touches only attributable bits. Two bits (`byte[2]:0x01`, `byte[4]:0x10`) remain unexplained and untouched by the preset; the mask is still written verbatim and last so they survive regardless |
+| Taskbar override silently reverts | **[VERIFIED]** real, mitigated | `ABM_SETSTATE` alone diverges from persisted `StuckRects3` and was observed reverting on its own. Write both layers and treat disagreement as a health signal |
 | Lossy per-effect boolean model | **[VERIFIED]** real, mitigated | `FontSmoothing` registry value is `2` while its SPI boolean reads `1`; `IconsOnly` inverts; Explorer-only values have no SPI accessor. Capture all three layers |
 | Multiple CRD clients | **[UNVERIFIED]** narrowed | No overlap observed in 191 events; keep the active-client set keyed by the per-session JID resource so either behavior is handled |
 | Partial system mutation | **[PLANNED]** | Durable pre-write snapshot, transaction states, verification, retry |
@@ -469,11 +523,12 @@ Closing the window leaves automation running; explicit Quit restores owned Windo
 Phase 0 is closed for the supported configuration. Begin implementation by scaffolding the pinned Wails project and porting the two proven adapters to Go, since Phase 1 and Phase 2 no longer depend on each other.
 
 ```text
-1. install the wails3 CLI and scaffold the project pinned to v3.0.0-beta.8
-2. port TaskbarManager first: SHAppBarMessage read, single-bit write, work-area verification
-3. port VisualEffectsManager using the verified three-layer snapshot and the four-step write order
-4. reproduce the Custom round-trip as an automated test against the Go implementation
-5. in parallel, build CRDDetector on the verified channel, provider, event IDs, session key,
+1. close the two Phase 1 evidence gaps: taskbar OFF baseline, and VisualFXSetting=0 baseline
+2. create the standalone Go module (no Wails)
+3. port TaskbarManager first: SHAppBarMessage read, single-bit write, work-area verification
+4. port VisualEffectsManager using the verified three-layer snapshot and the four-step write order
+5. reproduce the Custom round-trip as an automated Go test
+6. in parallel, build CRDDetector on the verified channel, provider, event IDs, session key,
    PID-scoped reconstruction, and bookmark handover
 ```
 
