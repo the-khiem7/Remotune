@@ -4,6 +4,8 @@ package crd
 
 import (
 	"fmt"
+
+	"golang.org/x/sys/windows"
 )
 
 // Subscription is a live, pull-mode Event Log subscription. It must be closed with
@@ -17,7 +19,8 @@ import (
 // their current, real CRD session. See docs/baseline/remotune.roadmap.md, Phase 2,
 // for the observation protocol to use when that becomes possible.
 type Subscription struct {
-	handle evtHandle
+	handle      evtHandle
+	signalEvent windows.Handle
 }
 
 // SubscribeAfterBookmark starts a subscription positioned after the given bookmark XML
@@ -37,21 +40,29 @@ func SubscribeAfterBookmark(bookmarkXML string) (*Subscription, error) {
 	}
 	defer evtClose(bm)
 
-	h, err := evtSubscribe(Channel, XPath, bm, evtSubscribeStartAfterBookmark)
+	sig, err := createManualResetEvent()
 	if err != nil {
+		return nil, fmt.Errorf("create signal event: %w", err)
+	}
+
+	h, err := evtSubscribe(Channel, XPath, bm, sig, evtSubscribeStartAfterBookmark)
+	if err != nil {
+		closeHandle(sig)
 		return nil, fmt.Errorf("subscribe: %w", err)
 	}
-	return &Subscription{handle: h}, nil
+	return &Subscription{handle: h, signalEvent: sig}, nil
 }
 
-// Close releases the subscription's handle. Safe to call once; the underlying handle
-// is not reused afterward.
+// Close releases the subscription's handles. Safe to call once; the underlying handles
+// are not reused afterward.
 func (s *Subscription) Close() {
 	if s == nil {
 		return
 	}
 	evtClose(s.handle)
 	s.handle = 0
+	closeHandle(s.signalEvent)
+	s.signalEvent = 0
 }
 
 // Poll pulls up to max pending transitions without blocking longer than timeoutMs.
@@ -64,10 +75,25 @@ func (s *Subscription) Poll(max int, timeoutMs uint32) ([]Transition, int, error
 	if max <= 0 {
 		max = batchSize
 	}
+
+	// Pull-mode contract: wait on the signal event, then call EvtNext with timeout 0.
+	// If nothing signaled within timeoutMs, there is nothing new; return empty rather
+	// than calling EvtNext at all.
+	if !waitForSignal(s.signalEvent, timeoutMs) {
+		return nil, 0, nil
+	}
+
 	handles := make([]evtHandle, max)
-	batch, err := evtNext(s.handle, handles, timeoutMs)
+	batch, err := evtNext(s.handle, handles, 0)
 	if err != nil {
 		return nil, 0, fmt.Errorf("poll subscription: %w", err)
+	}
+	if len(batch) < max {
+		// The result set is drained for now (EvtNext returned fewer than requested,
+		// or hit ERROR_NO_MORE_ITEMS internally). The event is manual-reset and stays
+		// signaled until cleared, so it is reset here to make the next call's wait
+		// meaningful instead of always returning immediately.
+		resetSignal(s.signalEvent)
 	}
 
 	var out []Transition
