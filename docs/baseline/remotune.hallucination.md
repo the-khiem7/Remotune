@@ -4,7 +4,7 @@ pack: "remotune"
 document: "hallucination"
 status: "active"
 updated: "2026-08-14"
-code_ref: "uncommitted"
+code_ref: "2b96ec90e9d73889291a45f9ce2508d344308aa0"
 ---
 
 # Remotune Decision and Uncertainty Ledger
@@ -230,3 +230,7 @@ These links are source references, not recorded Phase 0 verification.
 
 63. **Retraction.** An intermediate revision claimed the write order should put the per-effect SPI writes last, on the reasoning that an SPI write updates both the live session and the mask bit it owns. That ordering was implemented and **measured to be worse**, producing non-deterministic restores in which twenty or more values diverged. The reasoning was wrong because it assumed the mask persistence performed by `SPIF_UPDATEINIFILE` is reliable; decision 58 records that it is not. The settled sequence is in decision 50.
 64. **Scope correction.** A probe concluded that writing `VisualFXSetting` does not re-apply its preset over the individual effect values. That probe was weak: it drove the effects to values they already held, so it could not have detected a re-apply. The claim in decision 56 is retained only in the narrow form actually observed — writing the label did not disturb the values — while decision 59 records the converse effect, which is real and was the cause of a non-converging value.
+
+## Phase 2 operating decision
+
+65. **[DECIDED]** Phase 2 CRD detector work is split into Group A (historical query, parsing, bookmark handling, PID-scoped reconstruction, active-client set — testable against the 191 events already in the Event Log, no live disconnect needed) and Group B (real-time `EvtSubscribe` verification, which needs one real connect/disconnect on the operator's active CRD session and is deferred to a time of the operator's choosing). Agreed with the operator on 2026-08-14 because the CRD session in scope for Phase 2 is the same session currently controlling this machine. See [Phase 2 — CRD detector](remotune.roadmap.md#phase-2--crd-detector) for the observation protocol used for Group B.

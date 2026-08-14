@@ -4,7 +4,7 @@ pack: "remotune"
 document: "roadmap"
 status: "active"
 updated: "2026-08-14"
-code_ref: "uncommitted"
+code_ref: "2b96ec90e9d73889291a45f9ce2508d344308aa0"
 ---
 
 # Remotune Implementation Roadmap
@@ -370,7 +370,24 @@ Both gate cases identified after Phase 0 were exercised on 2026-08-14 and now pa
 
 ## Phase 2 — CRD detector
 
-**Status:** **[PLANNED]**, and **unblocked**. The CRD portion of Phase 0 is closed, so this phase may begin immediately and in parallel with the remaining Visual Effects research.
+**Status:** **[PLANNED]**, **unblocked**, and split into two work groups because the CRD host this phase depends on is the operator's real, currently-in-use session. Real events cannot be manufactured by Remotune; the detector only reads what CRD itself writes to the Event Log.
+
+**[DECIDED]** Group split, agreed with the operator on 2026-08-14 before implementation started:
+
+- **Group A — no live disconnect required.** Historical query, XML parsing, bookmark handling, PID-scoped reconstruction, and the active-client set are all testable against the 191 transition events already recorded in the Event Log (2026-07-23 onward, see [Phase 0 recorded evidence](#phase-0-recorded-evidence)). This is most of Phase 2 and does not touch the operator's active CRD session.
+- **Group B — requires one real connect/disconnect cycle.** Verifying the real-time `EvtSubscribe` path needs a transition that happens while a subscription is live, which historical replay cannot substitute for. The operator is currently controlling this machine through the CRD session under test, so this step is deferred to a time of the operator's choosing rather than requested mid-task.
+
+**[DECIDED]** Observation protocol for Group B, so the disconnect does not sever the ability to hand off a result:
+
+```text
+1. start a background watcher process BEFORE the operator disconnects, writing to a log file
+2. operator sends a message confirming the disconnect is about to happen
+3. operator disconnects and reconnects on their own schedule, outside the chat
+4. operator's next message (any content) is the signal to read the watcher's log file
+   and report whether both the disconnect and the reconnect were captured
+```
+
+No observation happens while the operator is disconnected; the watcher process does the capturing and the log is read back afterward.
 
 ### Deliverables
 
@@ -565,18 +582,22 @@ Closing the window leaves automation running; explicit Quit restores owned Windo
 
 ## Exact next action
 
-Phase 0 is closed for the supported configuration. Begin implementation by scaffolding the pinned Wails project and porting the two proven adapters to Go, since Phase 1 and Phase 2 no longer depend on each other.
+Phase 1's adapter layer is implemented and committed (`engine/`, commit `2b96ec9`). Phase 2 is approved to start, split into Group A and Group B as decided above.
 
 ```text
-1. close the two Phase 1 evidence gaps: taskbar OFF baseline, and VisualFXSetting=0 baseline
-2. create the standalone Go module (no Wails)
-3. port TaskbarManager first: SHAppBarMessage read, single-bit write, work-area verification
-4. port VisualEffectsManager using the verified three-layer snapshot and the four-step write order
-5. reproduce the Custom round-trip as an automated Go test
-6. in parallel, build CRDDetector on the verified channel, provider, event IDs, session key,
-   PID-scoped reconstruction, and bookmark handover
+1. implement Phase 2 Group A in the same standalone Go module (internal/crd, no Wails):
+   - EvtQuery historical bootstrap using the verified channel/provider/XPath
+   - event parser extracting the session JID resource and host ProcessID
+   - bookmark capture and replay
+   - PID-scoped state reconstruction (dangling connect from a dead PID = disconnected)
+   - active-client set keyed by the per-session JID resource
+   - test all of the above against the 191 events already in the Event Log
+2. defer Phase 2 Group B (live EvtSubscribe verification) until the operator disconnects
+   on their own schedule; follow the observation protocol above, do not request it
+3. once Group B is verified, close remaining Phase 1 work: the durable snapshot store
+   (belongs with Phase 3 recovery data)
+4. only after Phases 1-2 are both complete: scaffold the pinned Wails project (v3.0.0-beta.8)
+   and migrate the engine/ packages into it per decision 52
 ```
 
-Treat `tools/phase0/Get-VisualState.ps1` and `tools/phase0/Restore-VisualState.ps1` as the behavioural specification: the Go implementation must reproduce their results, and `tools/phase0/Test-CustomRoundTrip.ps1` defines the gate it must pass.
-
-Do not claim Windows 10, multi-monitor, or secondary-taskbar support until those environments are actually observed.
+Treat `tools/phase0/Get-VisualState.ps1` and `tools/phase0/Restore-VisualState.ps1` as superseded by the Go implementation in `engine/internal/wintune`, which is now the behavioural reference. Do not claim Windows 10, multi-monitor, or secondary-taskbar support until those environments are actually observed.

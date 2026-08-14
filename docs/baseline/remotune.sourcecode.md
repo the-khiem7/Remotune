@@ -4,7 +4,7 @@ pack: "remotune"
 document: "sourcecode"
 status: "active"
 updated: "2026-08-14"
-code_ref: "uncommitted"
+code_ref: "2b96ec90e9d73889291a45f9ce2508d344308aa0"
 ---
 
 # Remotune Planned Source Architecture
