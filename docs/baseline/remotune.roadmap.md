@@ -702,6 +702,12 @@ Gate coverage, by baseline requirement:
 
 **[VERIFIED]** On 2026-08-20, Wails CLI `v3.0.0-beta.8` generated the Windows resource successfully; `go test ./... -count=1 -short` passed 70 tests across 8 packages; and the versioned portable artifact `out/remotune-v0.1.3.exe` built successfully. **[UNVERIFIED]** Manual visual acceptance in Windows Explorer, the title bar, taskbar, and notification area remains required on the target machine.
 
+## Phase 5 UI enum rendering correction (2026-08-20)
+
+**[IMPLEMENTED]** Wails serializes the Go `crd.State` and `application.TuningState` values as numeric enums. The Vue control surface now maps those stable numeric values to their authoritative display labels before applying string operations or rendering. It also reads `PortablePathStatus.PathMismatch`, the actual backend field, rather than a nonexistent `PathMatches` field.
+
+**[VERIFIED]** The production Vue bundle completed successfully and `out/remotune-v0.1.4.exe` built with all 70 short Go tests passing. **[UNVERIFIED]** Open the v0.1.4 window once on Windows to confirm the full control surface renders against the live Wails runtime.
+
 ## Exact next action
 
 Phases 1 through 4 are implemented. The root module compiles and all migrated tests pass. The next step is Phase 5: the compact Vue UI.

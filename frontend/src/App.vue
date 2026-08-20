@@ -3,8 +3,8 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { GetAutostartStatus, Pause, PortablePathStatus, RestoreNow, Resume, SetAutostart, Status } from './wails'
 
 type CoordinatorStatus = {
-  Tuning: string
-  CRD: string
+  Tuning: number
+  CRD: number
   AutomationEnabled: boolean
   Paused: boolean
   Owned: boolean
@@ -18,10 +18,13 @@ type AutostartStatus = {
 
 type PortablePathStatus = {
   AutostartRegistered: boolean
-  PathMatches: boolean
+  PathMismatch: boolean
   RegisteredPath: string
   CurrentPath: string
 }
+
+const crdLabels = ['Unknown', 'Disconnected', 'Connected']
+const tuningLabels = ['Unknown', 'Baseline', 'Applying', 'Active', 'Restoring', 'Partial/Error', 'Recovery Required']
 
 const status = ref<CoordinatorStatus | null>(null)
 const autostart = ref<AutostartStatus | null>(null)
@@ -33,8 +36,8 @@ let refreshTimer: number | undefined
 const automationLabel = computed(() => status.value?.Paused ? 'Paused' : 'Enabled')
 const automationTone = computed(() => status.value?.Paused ? 'muted' : 'success')
 const autostartEnabled = computed(() => Boolean(autostart.value?.Registered && autostart.value.PathMatch))
-const tuningLabel = computed(() => status.value?.Tuning ?? 'Starting')
-const crdLabel = computed(() => status.value?.CRD ?? 'Unknown')
+const tuningLabel = computed(() => tuningLabels[status.value?.Tuning ?? 0] ?? 'Unknown')
+const crdLabel = computed(() => crdLabels[status.value?.CRD ?? 0] ?? 'Unknown')
 
 async function refresh() {
   try {
@@ -131,7 +134,7 @@ onUnmounted(() => {
     <section class="card settings" aria-labelledby="startup-heading">
       <div>
         <h2 id="startup-heading">Start with Windows</h2>
-        <p v-if="portablePath?.AutostartRegistered && !portablePath.PathMatches" class="warning">The startup entry points to a moved executable.</p>
+        <p v-if="portablePath?.AutostartRegistered && portablePath.PathMismatch" class="warning">The startup entry points to a moved executable.</p>
         <p v-else>Launch Remotune when you sign in.</p>
       </div>
       <button class="switch" :aria-pressed="autostartEnabled" :disabled="busy" @click="toggleAutostart">
