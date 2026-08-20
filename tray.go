@@ -72,6 +72,11 @@ func buildTrayMenu(app *application.App, mainWindow *application.WebviewWindow, 
 
 	// Quit.
 	menu.Add("Quit").OnClick(func(ctx *application.Context) {
+		if err := svc.Shutdown(); err != nil {
+			statusItem.SetLabel("Quit blocked: restore failed")
+			slog.Error("quit blocked because restore failed", "error", err)
+			return
+		}
 		app.Quit()
 	})
 
@@ -91,6 +96,9 @@ func buildTrayMenu(app *application.App, mainWindow *application.WebviewWindow, 
 func refreshTrayMenu(statusItem *application.MenuItem, pauseItem *application.MenuItem, svc *lifecycle.Service) {
 	status := svc.Status()
 	line := fmt.Sprintf("CRD: %s | %s", status.CRD, status.Tuning)
+	if status.Detector.Health == "Degraded" {
+		line += " | Detector degraded"
+	}
 	if status.Paused {
 		line += " (Paused)"
 	}

@@ -11,7 +11,7 @@ code_ref: "990cb3fed47dae98bb4bb1a7b0dc7f6b2badbd6a"
 
 ## Current checkpoint
 
-**[DECIDED]** Product direction is approved. **[IMPLEMENTED]** Phase 1 (Windows tuning adapters), Phase 2 (CRD detector), Phase 3 (StateCoordinator and durable recovery), and Phase 4 (Wails tray shell) all exist in the root Go module `github.com/khiemnguyen/remotune`, each verified against real Windows state and/or a real, live CRD session. **[PLANNED]** The Vue UI (Phase 5) does not exist yet. The repository also contains documentation, the Phase 0 evidence tooling under `tools/phase0/`, and the original standalone `engine/` module (superseded by the root module).
+**[DECIDED]** Product direction is approved. **[IMPLEMENTED]** Phases 1 through 5 exist in the root Go module `github.com/khiemnguyen/remotune`: Windows tuning adapters, CRD detector, StateCoordinator and durable recovery, Wails tray shell, and the compact Vue UI. Vue rendering and Close-to-tray have target-machine evidence. Restore Now, Start with Windows, Pause, and Resume were exercised in v0.1.3 but are not yet accepted as an end-to-end recovery workflow because a later detector/recovery incident remains open. The repository also contains documentation, the Phase 0 evidence tooling under `tools/phase0/`, and the original standalone `engine/` module (superseded by the root module).
 
 **[VERIFIED]** A Phase 0 evidence spike was executed on 2026-08-14 on the actual Controlled machine and is now substantially complete. All four areas are closed with reproducible live evidence recorded in [Phase 0 recorded evidence](#phase-0-recorded-evidence), including the exact 22-value set that `Adjust for best performance` changes and a passing arbitrary-`Custom` round-trip. Remaining gaps are environment coverage only: Windows 10, multi-monitor and secondary taskbars, Explorer-restart reconciliation, and the Wails runtime API exercising that requires a live app run.
 
@@ -692,7 +692,7 @@ Gate coverage, by baseline requirement:
 
 **[IMPLEMENTED]** Docker now installs the pinned Wails CLI, generates bindings, and builds the Vue assets before Go verification or packaging. The UI follows the system light/dark preference and deliberately does not include a dashboard, Windows Performance Options clone, Visual Effects checklist, or tuning presets.
 
-**[UNVERIFIED]** The live Windows acceptance remains: verify tray opening, close-to-tray, and exposed command behavior using the newly packaged executable.
+**[VERIFIED]** On 2026-08-20, the corrected v0.1.4 executable rendered the full Vue control surface on the target Windows machine and Close-to-tray worked. Restore Now, Start with Windows, Pause, and Resume were exercised in v0.1.3. **[UNVERIFIED]** Their recovery semantics and Explicit Quit remain open after the recorded runtime incident below.
 
 ## Application icon update (2026-08-20)
 
@@ -706,10 +706,22 @@ Gate coverage, by baseline requirement:
 
 **[IMPLEMENTED]** Wails serializes the Go `crd.State` and `application.TuningState` values as numeric enums. The Vue control surface now maps those stable numeric values to their authoritative display labels before applying string operations or rendering. It also reads `PortablePathStatus.PathMismatch`, the actual backend field, rather than a nonexistent `PathMatches` field.
 
-**[VERIFIED]** The production Vue bundle completed successfully and `out/remotune-v0.1.4.exe` built with all 70 short Go tests passing. **[UNVERIFIED]** Open the v0.1.4 window once on Windows to confirm the full control surface renders against the live Wails runtime.
+**[VERIFIED]** The production Vue bundle completed successfully and `out/remotune-v0.1.4.exe` built with all 70 short Go tests passing. On 2026-08-20, its full control surface was also observed rendering against the live Wails runtime; Close-to-tray worked.
 
 ## Exact next action
 
-Phases 1 through 5 and Windows icon packaging are implemented. The precise next action is to close the older running executable, launch `out/remotune-v0.1.4.exe`, and verify the compact Vue controls render from the live Wails runtime. Then exercise Close-to-tray, Pause/Resume, Restore Now, Start with Windows, and explicit Quit with the existing safety boundaries.
+Phases 1 through 5 and Windows icon packaging are implemented. The precise next implementation checkpoint is to make CRD detector health and the most recent redacted transition observable, add a bounded reconciliation path, and surface Pause/Resume and shutdown errors to the operator. Then reproduce an active-CRD apply -> Pause -> restore -> Resume -> reapply -> Explicit Quit cycle and verify exact animation/taskbar restoration before exit. The remaining Phase 6 matrix then covers crash recovery, autostart after login, Explorer restart, Windows 10, multi-monitor/secondary taskbars, Event Log fault handling, portable-path movement, unavailable WebView2, and resource use.
+
+## Runtime incident checkpoint (2026-08-20)
+
+**[VERIFIED]** Direct read-only inspection of the target machine's `Application` Event Log with the same provider and event IDs used by the detector found the most recent `chromoting` transition was Event ID `1` (Connected), record `48574`, process ID `5852`, at 2026-08-20 15:18:19 local time. No EventData or account/session content was retained in this checkpoint.
+
+**[IMPLEMENTED]** The incident now has bounded mitigation and observability: `Status` carries detector health, the last redacted transition (kind/time/record ID only), skipped-record count, consecutive poll-error count, last poll error, and reconciliation time. The run loop replays the same Event Log history at most every 30 seconds, so it can correct a stale subscription without guessing a connection state. Focused tests cover a live transition diagnostic and stale-subscription reconciliation. **[UNVERIFIED]** This has not yet been reproduced against the operator's active CRD session.
+
+**[IMPLEMENTED]** The Vue control now preserves a command error across its status refresh and shows a success acknowledgement. Pause explains when there is no Remotune-owned snapshot, which is a valid no-op for Windows restoration; the returned `Paused` status remains authoritative. **[UNVERIFIED]** The exact interaction still needs live observation.
+
+**[IMPLEMENTED]** Tray Quit now invokes `Service.Shutdown` before `app.Quit`; it cancels and waits for the detector loop, then restores the owned snapshot. A restore error blocks exit and changes the tray status rather than silently terminating. `Shutdown` is idempotent and does not wait when startup never began. **[UNVERIFIED]** The complete Wails/live-adapter restoration path still needs reproduction with a confirmed owned snapshot and exact animation/taskbar evidence.
+
+**[VERIFIED]** The v0.1.5 Start with Windows control produced a false “moved executable” warning immediately after registering the current executable. The Windows Run value was correctly quoted, but comparison did not remove those outer quotes. Path normalization now trims optional outer quotes before a case-insensitive comparison; unit tests cover quoted and whitespace-padded values. Startup after the next Windows sign-in remains to be observed.
 
 Do not claim Windows 10, multi-monitor, secondary-taskbar, or multi-client-CRD support until those configurations are actually observed.

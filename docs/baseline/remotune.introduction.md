@@ -64,7 +64,7 @@ Full detail is in the [roadmap](remotune.roadmap.md). The standalone `engine/` m
 
 **[IMPLEMENTED]** Phase 5's Vue window maps backend numeric CRD and tuning enums to display labels before rendering, and reads `PortablePathStatus.PathMismatch` from the actual backend contract. The prior implementation treated a numeric CRD state as a string and crashed during initial render, leaving only the styled window background.
 
-**[VERIFIED]** The tray, window creation, and tray `Open` flow were observed on the target Windows machine. The corrected `out/remotune-v0.1.4.exe` has build and automated-test evidence; **[UNVERIFIED]** live rendering of its corrected controls needs one operator launch.
+**[VERIFIED]** On 2026-08-20, the target machine opened the corrected `out/remotune-v0.1.4.exe` with its Vue controls rendered in the live Wails window, and Close-to-tray worked. Restore Now, Start with Windows, Pause, and Resume had previously been exercised in v0.1.3, but they are not yet accepted as an end-to-end recovery workflow. A later v0.1.4 observation reported CRD as `Disconnected` during an active connection; Pause from the resulting `Baseline`/no-snapshot state produced no visible Windows change; and a prior Explicit Quit did not restore animation. These safety-critical runtime incidents remain unresolved.
 
 ## Problem and product outcome
 

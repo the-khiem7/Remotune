@@ -37,6 +37,11 @@ type Session struct {
 type Snapshot struct {
 	State          State
 	ActiveSessions []Session
+	// LastTransition is the most recent redacted transition used to derive this
+	// snapshot. It lets operator diagnostics distinguish an honestly observed
+	// disconnect from an unknown/stale detector state without retaining EventData.
+	LastTransition    Transition
+	HasLastTransition bool
 	// CurrentHostPID is the ProcessID of the most recent transition observed, used to
 	// scope reconstruction to the current host process lifetime (ledger decision 36).
 	// Zero if no transitions were observed at all.
@@ -113,10 +118,15 @@ func Reconstruct(transitions []Transition) Snapshot {
 	}
 	sort.Slice(sessions, func(i, j int) bool { return sessions[i].SessionID < sessions[j].SessionID })
 
-	return Snapshot{
+	snapshot := Snapshot{
 		State:              state,
 		ActiveSessions:     sessions,
 		CurrentHostPID:     currentPID,
 		DroppedDisconnects: dropped,
 	}
+	if len(sorted) > 0 {
+		snapshot.LastTransition = sorted[len(sorted)-1]
+		snapshot.HasLastTransition = true
+	}
+	return snapshot
 }

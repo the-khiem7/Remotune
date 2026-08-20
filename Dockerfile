@@ -46,7 +46,7 @@ RUN go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.8
 ENV GOOS=windows
 ENV GOARCH=amd64
 ENV CGO_ENABLED=0
-ENV BUILD_VERSION=0.1.4
+ENV BUILD_VERSION=0.1.6
 
 # Copy full source. In compose, we bind-mount instead for live iteration.
 COPY . .

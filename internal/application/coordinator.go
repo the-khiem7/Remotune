@@ -93,6 +93,7 @@ type Status struct {
 	AutomationEnabled bool
 	Paused            bool
 	Owned             bool
+	Detector          DetectorStatus
 }
 
 // Status returns the current coordinator status.

@@ -50,8 +50,8 @@ services:
       - GOOS=windows
       - GOARCH=amd64
       - CGO_ENABLED=0
-      - BUILD_VERSION=${BUILD_VERSION:-0.1.4}
-      - ARTIFACT_NAME=${ARTIFACT_NAME:-remotune-v0.1.4.exe}
+      - BUILD_VERSION=${BUILD_VERSION:-0.1.6}
+      - ARTIFACT_NAME=${ARTIFACT_NAME:-remotune-v0.1.6.exe}
     entrypoint: ["sh", "-c"]
     command:
       - |

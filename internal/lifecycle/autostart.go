@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"golang.org/x/sys/windows/registry"
 )
@@ -41,8 +42,8 @@ func GetAutostartStatus() (AutostartStatus, error) {
 	}
 
 	exe, _ := os.Executable()
-	exe = filepath.Clean(exe)
-	registeredClean := filepath.Clean(val)
+	exe = normalizeAutostartPath(exe)
+	registeredClean := normalizeAutostartPath(val)
 
 	return AutostartStatus{
 		Registered:     true,
@@ -112,4 +113,13 @@ func equalsIgnoreCase(a, b string) bool {
 		}
 	}
 	return true
+}
+
+// normalizeAutostartPath removes the optional outer quotes required by a Windows
+// Run value before comparison. SetAutostart deliberately writes quoted paths so a
+// portable executable remains valid after being moved into a directory with spaces.
+func normalizeAutostartPath(path string) string {
+	path = strings.TrimSpace(path)
+	path = strings.Trim(path, `"`)
+	return filepath.Clean(path)
 }

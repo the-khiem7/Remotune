@@ -9,7 +9,7 @@ code_ref: "990cb3fed47dae98bb4bb1a7b0dc7f6b2badbd6a"
 
 # Remotune Use and Behavior Contract
 
-> **Availability:** **[IMPLEMENTED]** A versioned portable executable is produced under `out/`; the current build is `out/remotune-v0.1.4.exe`. The tray and window have been observed on the target machine. **[UNVERIFIED]** Open the corrected v0.1.4 artifact once to confirm its Vue controls render live.
+> **Availability:** **[IMPLEMENTED]** A versioned portable executable is produced under `out/`; the current build is `out/remotune-v0.1.4.exe`. On 2026-08-20, its Vue controls rendered and Close-to-tray worked on the target machine. Restore Now, Start with Windows, Pause, and Resume were exercised in v0.1.3. **[UNVERIFIED]** Do not rely on Pause or Explicit Quit to restore Windows state until the unresolved detector/recovery incident is reproduced and fixed.
 
 ## What Remotune will do
 
@@ -61,6 +61,7 @@ The UI must not collapse different concepts into one ambiguous light. It reports
 | CRD | Unknown / Disconnected / Connected | Detector's observed remote-session state |
 | Automation | Enabled / Paused | Whether automatic reactions are allowed |
 | Tuning | Baseline / Applying / Active / Restoring / Partial/Error / Recovery Required | Ownership and transition state |
+| Detector | Starting / Healthy / Degraded | Event Log subscription health; last transition metadata is redacted |
 
 Examples:
 

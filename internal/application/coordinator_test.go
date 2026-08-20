@@ -606,3 +606,100 @@ func TestRunAppliesOnBootstrapAndRestoresOnLiveDisconnect(t *testing.T) {
 		t.Fatal("snapshot should be retired after the live disconnect was reconciled")
 	}
 }
+
+func TestRunSurfacesRedactedTransitionDiagnostics(t *testing.T) {
+	store := newTestStore(t)
+	ve := newFakeVE()
+	tb := newFakeTB()
+	c := NewCoordinator(store, ve, tb, fullCfg())
+
+	connect := crd.Transition{Kind: crd.KindConnected, RecordID: 10, Time: time.Now(), ProcessID: 100, SessionID: "s1"}
+	disconnect := crd.Transition{Kind: crd.KindDisconnected, RecordID: 11, Time: time.Now().Add(time.Second), ProcessID: 100, SessionID: "s1"}
+	det := &fakeBootstrapper{
+		boot: crd.BootstrapResult{Snapshot: crd.Reconstruct([]crd.Transition{connect}), Bookmark: "fake-bookmark"},
+		sub:  &fakeSubscription{queue: [][]crd.Transition{{disconnect}}},
+	}
+	diagnostics := NewDetectorDiagnostics()
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- Run(ctx, c, det, diagnostics) }()
+
+	deadline := time.After(2 * time.Second)
+	for diagnostics.Status().LastRecordID != disconnect.RecordID {
+		select {
+		case <-deadline:
+			t.Fatalf("diagnostics never recorded live transition: %+v", diagnostics.Status())
+		default:
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+
+	got := diagnostics.Status()
+	if got.Health != "Healthy" || got.LastTransition != crd.KindDisconnected.String() {
+		t.Fatalf("diagnostics = %+v, want healthy disconnected transition", got)
+	}
+	if got.LastRecordID != disconnect.RecordID {
+		t.Fatalf("last record = %d, want %d", got.LastRecordID, disconnect.RecordID)
+	}
+	cancel()
+	if err := <-done; err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+}
+
+type reconcilingBootstrapper struct {
+	mu    sync.Mutex
+	boots []crd.BootstrapResult
+	sub   *fakeSubscription
+}
+
+func (f *reconcilingBootstrapper) Bootstrap() (crd.BootstrapResult, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	boot := f.boots[0]
+	if len(f.boots) > 1 {
+		f.boots = f.boots[1:]
+	}
+	return boot, nil
+}
+
+func (f *reconcilingBootstrapper) SubscribeAfterBookmark(string) (Subscription, error) {
+	return f.sub, nil
+}
+
+func TestRunReconcilesBoundedStaleSubscription(t *testing.T) {
+	oldInterval := reconciliationInterval
+	reconciliationInterval = 20 * time.Millisecond
+	t.Cleanup(func() { reconciliationInterval = oldInterval })
+
+	store := newTestStore(t)
+	ve := newFakeVE()
+	tb := newFakeTB()
+	c := NewCoordinator(store, ve, tb, fullCfg())
+	connect := crd.Transition{Kind: crd.KindConnected, RecordID: 20, Time: time.Now(), ProcessID: 100, SessionID: "s1"}
+	disconnect := crd.Transition{Kind: crd.KindDisconnected, RecordID: 21, Time: time.Now().Add(time.Second), ProcessID: 100, SessionID: "s1"}
+	det := &reconcilingBootstrapper{
+		boots: []crd.BootstrapResult{
+			{Snapshot: crd.Reconstruct([]crd.Transition{connect}), Bookmark: "first"},
+			{Snapshot: crd.Reconstruct([]crd.Transition{connect, disconnect}), Bookmark: "second"},
+		},
+		sub: &fakeSubscription{},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- Run(ctx, c, det, NewDetectorDiagnostics()) }()
+
+	deadline := time.After(2 * time.Second)
+	for c.Status().Tuning != TuningBaseline {
+		select {
+		case <-deadline:
+			t.Fatalf("bounded reconciliation did not restore stale connected state: %+v", c.Status())
+		default:
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+	cancel()
+	if err := <-done; err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+}

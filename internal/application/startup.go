@@ -5,6 +5,8 @@ package application
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	"github.com/khiemnguyen/remotune/internal/crd"
 )
@@ -14,6 +16,106 @@ import (
 // event, so this is not busy polling; it bounds how promptly Quit/context
 // cancellation is noticed between events.
 const pollInterval = 2000 // milliseconds
+
+// reconciliationInterval bounds how long the UI can remain stale if the Event Log
+// subscription misses a signal without reporting an error. Reconciliation queries
+// the same redacted history as startup; it never guesses a connection state.
+var reconciliationInterval = 30 * time.Second
+
+// DetectorStatus is the operator-facing, privacy-safe health snapshot of the CRD
+// detector. It intentionally excludes session IDs and EventData, which can contain
+// account information. It is embedded in application.Status for the Vue and tray
+// surfaces.
+type DetectorStatus struct {
+	Health                string
+	LastTransition        string
+	LastTransitionAt      time.Time
+	LastRecordID          uint64
+	LastPollError         string
+	ConsecutivePollErrors int
+	SkippedRecords        int
+	LastReconciledAt      time.Time
+}
+
+// DetectorDiagnostics serializes detector health updates from the run loop while
+// Status is being polled by the UI and tray.
+type DetectorDiagnostics struct {
+	mu     sync.RWMutex
+	status DetectorStatus
+}
+
+func NewDetectorDiagnostics() *DetectorDiagnostics {
+	return &DetectorDiagnostics{status: DetectorStatus{Health: "Starting"}}
+}
+
+func (d *DetectorDiagnostics) Status() DetectorStatus {
+	if d == nil {
+		return DetectorStatus{Health: "Unavailable"}
+	}
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	return d.status
+}
+
+func (d *DetectorDiagnostics) recordBootstrap(snapshot crd.Snapshot) {
+	if d == nil {
+		return
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.status.Health = "Healthy"
+	d.status.LastPollError = ""
+	d.status.ConsecutivePollErrors = 0
+	d.status.LastReconciledAt = time.Now()
+	if snapshot.HasLastTransition {
+		d.recordTransitionLocked(snapshot.LastTransition)
+	}
+}
+
+func (d *DetectorDiagnostics) recordTransition(t crd.Transition) {
+	if d == nil {
+		return
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.recordTransitionLocked(t)
+}
+
+func (d *DetectorDiagnostics) recordTransitionLocked(t crd.Transition) {
+	if t.RecordID >= d.status.LastRecordID {
+		d.status.LastTransition = t.Kind.String()
+		d.status.LastTransitionAt = t.Time
+		d.status.LastRecordID = t.RecordID
+	}
+}
+
+func (d *DetectorDiagnostics) recordPoll(skipped int, err error) {
+	if d == nil {
+		return
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.status.SkippedRecords += skipped
+	if err != nil {
+		d.status.Health = "Degraded"
+		d.status.LastPollError = err.Error()
+		d.status.ConsecutivePollErrors++
+		return
+	}
+	d.status.Health = "Healthy"
+	d.status.LastPollError = ""
+	d.status.ConsecutivePollErrors = 0
+}
+
+func (d *DetectorDiagnostics) recordFailure(err error) {
+	if d == nil {
+		return
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.status.Health = "Degraded"
+	d.status.LastPollError = err.Error()
+}
 
 // Bootstrapper is the subset of the crd package's startup sequence the coordinator
 // depends on, declared locally so it can be faked in tests instead of requiring a
@@ -51,17 +153,25 @@ func (LiveDetector) SubscribeAfterBookmark(bookmark string) (Subscription, error
 // bookmark. This ordering, and specifically using the bootstrap's own bookmark rather
 // than a fresh one, is what closes the query/subscription race (ledger decision 37):
 // no transition between the historical read and the live subscription can be lost.
-func Run(ctx context.Context, c *Coordinator, det Bootstrapper) error {
+func Run(ctx context.Context, c *Coordinator, det Bootstrapper, diagnostics ...*DetectorDiagnostics) error {
+	var diag *DetectorDiagnostics
+	if len(diagnostics) > 0 {
+		diag = diagnostics[0]
+	}
 	boot, err := det.Bootstrap()
 	if err != nil {
+		diag.recordFailure(fmt.Errorf("startup bootstrap: %w", err))
 		return fmt.Errorf("startup bootstrap: %w", err)
 	}
+	diag.recordBootstrap(boot.Snapshot)
 	if err := c.Bootstrap(boot.Snapshot.State); err != nil {
+		diag.recordFailure(fmt.Errorf("startup reconcile: %w", err))
 		return fmt.Errorf("startup reconcile: %w", err)
 	}
 
 	sub, err := det.SubscribeAfterBookmark(boot.Bookmark)
 	if err != nil {
+		diag.recordFailure(fmt.Errorf("startup subscribe: %w", err))
 		return fmt.Errorf("startup subscribe: %w", err)
 	}
 	defer sub.Close()
@@ -72,6 +182,7 @@ func Run(ctx context.Context, c *Coordinator, det Bootstrapper) error {
 	// rather than an empty one, so a transition delivered here does not appear to
 	// be starting from a falsely-disconnected state.
 	observed := boot.Snapshot
+	nextReconciliation := time.Now().Add(reconciliationInterval)
 
 	for {
 		select {
@@ -80,23 +191,38 @@ func Run(ctx context.Context, c *Coordinator, det Bootstrapper) error {
 		default:
 		}
 
-		transitions, _, err := sub.Poll(32, pollInterval)
+		transitions, skipped, err := sub.Poll(32, pollInterval)
+		diag.recordPoll(skipped, err)
 		if err != nil {
-			// A poll error is a detector health problem, not a coordinator state
-			// change; Remotune keeps whatever CRD state it last observed rather than
-			// guessing, and diagnostics surfaces the error (belongs with Phase 4/5
-			// diagnostics wiring; here it simply propagates to the caller's log).
-			continue
-		}
-		if len(transitions) == 0 {
-			continue
+			// Keep the last observed state, then use the bounded history replay below
+			// to recover from a missed subscription signal without guessing.
+		} else if len(transitions) > 0 {
+			merged := append(activeAsHistory(observed), transitions...)
+			observed = crd.Reconstruct(merged)
+			for _, transition := range transitions {
+				diag.recordTransition(transition)
+			}
+
+			if err := c.Observe(observed.State); err != nil {
+				diag.recordFailure(fmt.Errorf("observe: %w", err))
+				return fmt.Errorf("observe: %w", err)
+			}
 		}
 
-		merged := append(activeAsHistory(observed), transitions...)
-		observed = crd.Reconstruct(merged)
-
+		if time.Now().Before(nextReconciliation) {
+			continue
+		}
+		nextReconciliation = time.Now().Add(reconciliationInterval)
+		boot, err := det.Bootstrap()
+		if err != nil {
+			diag.recordFailure(fmt.Errorf("reconcile bootstrap: %w", err))
+			continue
+		}
+		observed = boot.Snapshot
+		diag.recordBootstrap(observed)
 		if err := c.Observe(observed.State); err != nil {
-			return fmt.Errorf("observe: %w", err)
+			diag.recordFailure(fmt.Errorf("reconcile observe: %w", err))
+			return fmt.Errorf("reconcile observe: %w", err)
 		}
 	}
 }

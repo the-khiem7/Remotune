@@ -13,7 +13,7 @@ code_ref: "990cb3fed47dae98bb4bb1a7b0dc7f6b2badbd6a"
 
 **[IMPLEMENTED]** Phases 1 through 5. The root Go module `github.com/khiemnguyen/remotune` contains the Wails v3 tray shell, migrated Phase 1–3 adapters, coordinator, lifecycle package, and compact Vue/Vite control surface. The standalone `engine/` module is superseded but retained for reference.
 
-**[UNVERIFIED]** Phase 6 hardening and final live UI acceptance remain. The versioned v0.1.4 binary has build/test evidence but its corrected Vue window has not yet been manually observed.
+**[UNVERIFIED]** Phase 6 hardening remains. The versioned v0.1.4 binary has build/test evidence and its corrected Vue window, including Close-to-tray, was manually observed on the target machine on 2026-08-20. Restore Now, Start with Windows, Pause, and Resume were exercised in v0.1.3, but the end-to-end safety workflow is open: v0.1.4 reported a disconnected CRD state during an active connection, and the operator reported a prior Explicit Quit that did not restore animation.
 
 **[VERIFIED]** items rest on the live observations recorded in [Phase 0 recorded evidence](remotune.roadmap.md#phase-0-recorded-evidence), collected on Windows 11 Pro 23H2 with CRD host 152.0.7977.9 as a non-elevated user. `tools/phase0/Get-VisualState.ps1` is the working reference for the snapshot shape described under [Persistence](#persistence).
 
@@ -139,6 +139,7 @@ Detector responsibilities:
 - query recent events and reconstruct current state;
 - parse relevant connect/disconnect events;
 - subscribe to future events;
+- reconcile from the same Event Log history at a bounded interval when live delivery may be stale;
 - deduplicate transitions;
 - expose `Unknown`, `Disconnected`, or `Connected` plus detector health/errors;
 - handle duplicate events, quick connect/disconnect, start while connected or disconnected, subscription failure, Event Log rotation/clear, stale bookmarks if used, host/service restart, and delayed callbacks;

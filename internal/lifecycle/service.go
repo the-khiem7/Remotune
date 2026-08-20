@@ -22,19 +22,21 @@ import (
 // Service owns the Remotune coordinator and CRD detector lifecycle. It bridges
 // the Wails application events to the coordinator's methods.
 type Service struct {
-	mu          sync.Mutex
-	coordinator *application.Coordinator
-	store       *application.RecoveryStore
-	running     bool
-	cancel      context.CancelFunc
-	done        chan struct{}
+	mu           sync.Mutex
+	coordinator  *application.Coordinator
+	store        *application.RecoveryStore
+	running      bool
+	shuttingDown bool
+	cancel       context.CancelFunc
+	done         chan struct{}
+	diagnostics  *application.DetectorDiagnostics
 }
 
 // NewService creates the lifecycle service with default configuration. The actual
 // coordinator start happens in Run, which is called after the Wails app is running.
 func NewService() *Service {
 	return &Service{
-		done: make(chan struct{}),
+		diagnostics: application.NewDetectorDiagnostics(),
 	}
 }
 
@@ -46,14 +48,22 @@ func (s *Service) Run(ctx context.Context) {
 		s.mu.Unlock()
 		return
 	}
+	if s.shuttingDown {
+		s.mu.Unlock()
+		return
+	}
 	s.running = true
+	s.done = make(chan struct{})
 
 	runCtx, cancel := context.WithCancel(ctx)
 	s.cancel = cancel
 	s.mu.Unlock()
 
 	defer func() {
+		s.mu.Lock()
 		close(s.done)
+		s.running = false
+		s.mu.Unlock()
 	}()
 
 	// Initialize adapters.
@@ -81,31 +91,43 @@ func (s *Service) Run(ctx context.Context) {
 	s.mu.Unlock()
 
 	det := application.LiveDetector{}
-	if err := application.Run(runCtx, coord, det); err != nil {
+	if err := application.Run(runCtx, coord, det, s.diagnostics); err != nil {
 		slog.Error("coordinator run loop exited with error", "error", err)
 	}
 }
 
 // Shutdown performs the explicit Quit sequence: stop transitions, restore owned state,
 // and clean up resources. Called by the Wails shutdown hook.
-func (s *Service) Shutdown() {
+func (s *Service) Shutdown() error {
 	s.mu.Lock()
+	if s.shuttingDown {
+		s.mu.Unlock()
+		return nil
+	}
+	s.shuttingDown = true
 	coord := s.coordinator
 	cancelFn := s.cancel
+	running := s.running
+	done := s.done
 	s.mu.Unlock()
 
 	if cancelFn != nil {
 		cancelFn()
 	}
 
-	// Wait for Run to finish so no concurrent transitions are in flight.
-	<-s.done
+	// Wait for Run to finish so no concurrent transitions are in flight. If Quit
+	// was selected before ApplicationStarted, there is no loop or owned snapshot to
+	// wait for.
+	if running {
+		<-done
+	}
 
 	if coord != nil {
 		if err := coord.Quit(); err != nil {
-			slog.Error("coordinator quit returned error", "error", err)
+			return fmt.Errorf("restore before quit: %w", err)
 		}
 	}
+	return nil
 }
 
 // Status returns the current coordinator status for UI display.
@@ -119,9 +141,12 @@ func (s *Service) Status() application.Status {
 			Tuning:            application.TuningUnknown,
 			CRD:               crd.StateUnknown,
 			AutomationEnabled: true,
+			Detector:          s.diagnostics.Status(),
 		}
 	}
-	return coord.Status()
+	status := coord.Status()
+	status.Detector = s.diagnostics.Status()
+	return status
 }
 
 // Pause pauses automation, restoring owned state.

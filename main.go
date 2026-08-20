@@ -97,5 +97,7 @@ func main() {
 
 	// After app.Run returns, perform the explicit Quit sequence:
 	// stop transitions, restore owned state, clean up.
-	svc.Shutdown()
+	if err := svc.Shutdown(); err != nil {
+		slog.Error("restore during application shutdown failed", "error", err)
+	}
 }
