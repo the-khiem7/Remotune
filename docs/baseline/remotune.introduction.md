@@ -3,8 +3,8 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "introduction"
 status: "active"
-updated: "2026-08-14"
-code_ref: "uncommitted"
+updated: "2026-08-20"
+code_ref: "990cb3fed47dae98bb4bb1a7b0dc7f6b2badbd6a"
 ---
 
 # Remotune Baseline Introduction
@@ -59,6 +59,12 @@ Full detail is in the [roadmap](remotune.roadmap.md). The standalone `engine/` m
 **[DECIDED]** The core invariant is: every Remotune-owned change must have a durable, reliable path back to the exact user state that existed before Remotune changed it.
 
 **[DECIDED]** The product boundary is: Remotune automates remote-session transitions; Windows remains the source of truth for Windows Visual Effects configuration.
+
+**[IMPLEMENTED]** The canonical app-mark source is `assets/branding/remotune.svg`. Derived PNGs serve Wails application and tray identity; `build/windows/icon.ico` and `build/windows/wails.exe.manifest` generate the Windows `.syso` resource before the versioned portable executable is compiled.
+
+**[IMPLEMENTED]** Phase 5's Vue window maps backend numeric CRD and tuning enums to display labels before rendering, and reads `PortablePathStatus.PathMismatch` from the actual backend contract. The prior implementation treated a numeric CRD state as a string and crashed during initial render, leaving only the styled window background.
+
+**[VERIFIED]** The tray, window creation, and tray `Open` flow were observed on the target Windows machine. The corrected `out/remotune-v0.1.4.exe` has build and automated-test evidence; **[UNVERIFIED]** live rendering of its corrected controls needs one operator launch.
 
 ## Problem and product outcome
 

@@ -3,13 +3,13 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "useguide"
 status: "active"
-updated: "2026-08-14"
-code_ref: "5185cbc2825df1e38fe0823625c00acdce52b480"
+updated: "2026-08-20"
+code_ref: "990cb3fed47dae98bb4bb1a7b0dc7f6b2badbd6a"
 ---
 
-# Remotune Planned Use and Behavior Contract
+# Remotune Use and Behavior Contract
 
-> **Availability:** **[PLANNED]** This is the approved user/operator behavior to implement, not instructions for a currently working application. No Remotune executable exists in the inspected baseline.
+> **Availability:** **[IMPLEMENTED]** A versioned portable executable is produced under `out/`; the current build is `out/remotune-v0.1.4.exe`. The tray and window have been observed on the target machine. **[UNVERIFIED]** Open the corrected v0.1.4 artifact once to confirm its Vue controls render live.
 
 ## What Remotune will do
 
@@ -36,7 +36,7 @@ CRD disconnects
 
 ## Install and first run
 
-**[PLANNED]** The primary package is a portable `Remotune.exe`. WebView2 is a required Windows runtime dependency because the UI uses Wails. If WebView2 is unavailable, Remotune must explain the missing prerequisite rather than fail silently. **[VERIFIED]** Presence can be detected without elevation by reading the WebView2 EdgeUpdate client key; the absent-runtime failure path itself is **[UNVERIFIED]** because the evidence machine has the runtime installed.
+**[IMPLEMENTED]** The primary package is a versioned portable `remotune-v<version>.exe`. WebView2 is a required Windows runtime dependency because the UI uses Wails. If WebView2 is unavailable, Remotune must explain the missing prerequisite rather than fail silently. **[VERIFIED]** Presence can be detected without elevation by reading the WebView2 EdgeUpdate client key; the absent-runtime failure path itself is **[UNVERIFIED]** because the evidence machine has the runtime installed.
 
 **[VERIFIED]** Normal operation does not require Administrator for the integrations exercised so far: reading CRD events, subscribing to them in real time, reading Visual Effects state, and reading and writing taskbar auto-hide all succeeded as a standard non-elevated user. **[PLANNED]** Any target-system permission incompatibility must still be reported deliberately.
 

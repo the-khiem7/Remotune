@@ -3,8 +3,8 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "hallucination"
 status: "active"
-updated: "2026-08-14"
-code_ref: "5185cbc2825df1e38fe0823625c00acdce52b480"
+updated: "2026-08-20"
+code_ref: "990cb3fed47dae98bb4bb1a7b0dc7f6b2badbd6a"
 ---
 
 # Remotune Decision and Uncertainty Ledger
@@ -162,6 +162,13 @@ Still **[UNVERIFIED]**:
 - How can a startup registration broken by moving or deleting the executable be detected rather than merely documented?
 - How does the application behave when WebView2 is genuinely absent? Detection is proven, but the failure path is untested because the runtime is installed.
 - Does any adapter need limited elevation on other systems? Only one machine was probed.
+
+## Phase 5 UI and packaging decisions
+
+77. **[DECIDED]** The frontend treats Go named integer states as numeric transport values, not as formatted strings. It maps CRD `0/1/2` to `Unknown`/`Disconnected`/`Connected` and tuning `0` through `6` to the corresponding coordinator labels before applying CSS classes or rendering text. Unknown future values fall back to `Unknown`.
+78. **[DECIDED]** The portable-path warning reads `PortablePathStatus.PathMismatch`, which is the backend contract. A UI field named `PathMatches` is not valid and must not be inferred.
+79. **[DECIDED]** `assets/branding/remotune.svg` is the editable icon source. Derived PNGs serve Wails application/tray identity; `build/windows/icon.ico` and `build/windows/wails.exe.manifest` generate the ignored Windows `.syso` resource during verification and packaging. The executable and tray icons use different raster sizes but one shared mark.
+80. **[UNVERIFIED]** The target machine demonstrated window creation, tray presence, and the tray `Open` action. The first UI render failed because of decision 77's original contract mismatch. The corrected `v0.1.4` artifact has only build/test evidence until an operator observes its controls in the live WebView2 window.
 
 ## Candidate choices, not requirements
 

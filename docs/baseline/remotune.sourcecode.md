@@ -3,19 +3,27 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "sourcecode"
 status: "active"
-updated: "2026-08-14"
-code_ref: "uncommitted"
+updated: "2026-08-20"
+code_ref: "990cb3fed47dae98bb4bb1a7b0dc7f6b2badbd6a"
 ---
 
 # Remotune Source Architecture
 
 ## Implementation status
 
-**[IMPLEMENTED]** Phases 1 through 4. The root Go module `github.com/khiemnguyen/remotune` contains the full application: Wails v3 tray shell, the migrated Phase 1–3 adapters, the coordinator, and the lifecycle package. The standalone `engine/` module is superseded but retained for reference.
+**[IMPLEMENTED]** Phases 1 through 5. The root Go module `github.com/khiemnguyen/remotune` contains the Wails v3 tray shell, migrated Phase 1–3 adapters, coordinator, lifecycle package, and compact Vue/Vite control surface. The standalone `engine/` module is superseded but retained for reference.
 
-**[PLANNED]** Phase 5 (Vue UI) and Phase 6 (hardening). The current UI surface is the system tray context menu only.
+**[UNVERIFIED]** Phase 6 hardening and final live UI acceptance remain. The versioned v0.1.4 binary has build/test evidence but its corrected Vue window has not yet been manually observed.
 
 **[VERIFIED]** items rest on the live observations recorded in [Phase 0 recorded evidence](remotune.roadmap.md#phase-0-recorded-evidence), collected on Windows 11 Pro 23H2 with CRD host 152.0.7977.9 as a non-elevated user. `tools/phase0/Get-VisualState.ps1` is the working reference for the snapshot shape described under [Persistence](#persistence).
+
+## Current presentation and packaging flow
+
+`main.go` embeds `frontend/dist`, `assets/app/remotune-256.png`, and `assets/tray/remotune-32.png`. It supplies the app icon to Wails, sets the system-tray icon, creates the initially hidden control window, and binds `internal/lifecycle.Service` as the only Vue-facing backend surface.
+
+`frontend/src/App.vue` translates numeric `crd.State` and `application.TuningState` values to display labels at its boundary. It must not call string operations on raw transport values. `frontend/src/wails.ts` remains the sole import point for generated bindings.
+
+`docker-compose.yml` generates bindings, builds the Vue distribution, creates `wails_windows_amd64.syso` from the ICO and manifest, and then builds `out/remotune-v<version>.exe`. The `.syso` is reproducible and ignored; the SVG, PNGs, ICO, and manifest are the committed inputs.
 
 ## Architecture
 

@@ -3,8 +3,8 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "roadmap"
 status: "active"
-updated: "2026-08-14"
-code_ref: "b36da05286ab9df4fce0a89edd5c18c3231e0054 + working tree Phase 5"
+updated: "2026-08-20"
+code_ref: "990cb3fed47dae98bb4bb1a7b0dc7f6b2badbd6a"
 ---
 
 # Remotune Implementation Roadmap
@@ -710,14 +710,6 @@ Gate coverage, by baseline requirement:
 
 ## Exact next action
 
-Phases 1 through 4 are implemented. The root module compiles and all migrated tests pass. The next step is Phase 5: the compact Vue UI.
-
-```text
-1. install the wails3 CLI (or confirm go build produces a runnable exe)
-2. run the app once to verify tray appears, Quit restores state, autostart toggle writes correctly
-3. scaffold the Vue frontend in frontend/ with Vite
-4. implement the compact 380–450 px window per Phase 5 deliverables
-5. wire Wails bindings/events from coordinator Status to Vue reactivity
-```
+Phases 1 through 5 and Windows icon packaging are implemented. The precise next action is to close the older running executable, launch `out/remotune-v0.1.4.exe`, and verify the compact Vue controls render from the live Wails runtime. Then exercise Close-to-tray, Pause/Resume, Restore Now, Start with Windows, and explicit Quit with the existing safety boundaries.
 
 Do not claim Windows 10, multi-monitor, secondary-taskbar, or multi-client-CRD support until those configurations are actually observed.
