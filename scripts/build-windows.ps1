@@ -20,7 +20,7 @@ if (Test-Path $artifactPath) {
     try {
         [IO.File]::OpenWrite($artifactPath).Close()
     } catch {
-        Write-Error "Cannot overwrite $artifactName — the file is locked (app may be running). Close it and retry."
+        Write-Error "Cannot overwrite $artifactName - the file is locked (app may be running). Close it and retry."
         exit 1
     }
 }

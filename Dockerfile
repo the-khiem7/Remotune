@@ -3,8 +3,8 @@
 #
 # Base: Go 1.26.1 on Debian Bookworm (stable, good cross-compile support)
 # Toolchain: Go 1.26.1, Bun (frontend, Phase 5), Windows cross-compile via CGO_ENABLED=0
-# Wails CLI: deferred to Phase 5 (requires GTK3 dev libs for Linux compilation;
-#            binding generation is only needed once a Vue frontend exists)
+# Wails CLI: used in Phase 5 for type-safe frontend binding generation. Native
+# Linux app builds remain out of scope for this Windows cross-compile image.
 #
 # Build:  docker compose build
 # Use:    docker compose run --rm verify
@@ -36,6 +36,9 @@ ENV PATH="${BUN_INSTALL}/bin:${PATH}"
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
+
+# Keep the Wails generator inside Docker with the rest of the project toolchain.
+RUN go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.8
 
 # Default environment for Windows cross-compilation.
 # CGO_ENABLED=0 because Wails v3 uses go-winloader (pure Go WebView2 bindings).

@@ -4,6 +4,8 @@
 
 Remotune is a Windows tray utility built with Wails v3, Go, and Vue. This runbook makes its build environment a Docker-only boundary: the Windows host is an editor and container orchestrator, not a place to install project toolchains or SDKs.
 
+The Docker image includes the Wails v3 CLI pinned to `v3.0.0-beta.8`. Both `verify` and `build` generate TypeScript bindings under `frontend/bindings/`, install frontend dependencies with Bun, and build `frontend/dist/` before compiling Go. Bindings and generated production assets are intentionally ignored by Git; they are recreated in Docker on every verification or package build.
+
 The Docker environment was established on 2026-08-14. Dockerfile, docker-compose.yml, delegate scripts, and `.dockerignore` are committed. Docker verification passed: `verify` (gofmt, go vet, compile check, platform-independent tests) and `build` (produces `out/Remotune.exe`, 11.9 MB, CGO_ENABLED=0 cross-compile from Linux). The `shell` service provides interactive diagnostics.
 
 ## Mandatory build-environment policy

@@ -17,6 +17,10 @@ services:
     entrypoint: ["sh", "-c"]
     command:
       - |
+        echo "=== frontend bindings ===" &&
+        wails3 generate bindings -ts &&
+        echo "=== frontend build ===" &&
+        cd frontend && bun install && bun run build && cd /src &&
         echo "=== go fmt ===" &&
         UNFMT=$(gofmt -l . | grep -v '^engine/' || true) &&
         if [ -n "$UNFMT" ]; then echo "$UNFMT"; echo "FAIL: files need gofmt"; exit 1; fi &&
@@ -50,6 +54,8 @@ services:
     entrypoint: ["sh", "-c"]
     command:
       - |
+        wails3 generate bindings -ts &&
+        cd frontend && bun install && bun run build && cd /src &&
         go build -trimpath \
           -ldflags="-s -w -H windowsgui -X main.version=$${BUILD_VERSION}" \
           -o "out/$${ARTIFACT_NAME}" .

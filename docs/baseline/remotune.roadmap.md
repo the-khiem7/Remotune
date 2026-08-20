@@ -4,7 +4,7 @@ pack: "remotune"
 document: "roadmap"
 status: "active"
 updated: "2026-08-14"
-code_ref: "uncommitted"
+code_ref: "b36da05286ab9df4fce0a89edd5c18c3231e0054 + working tree Phase 5"
 ---
 
 # Remotune Implementation Roadmap
@@ -571,7 +571,7 @@ Gate coverage, by baseline requirement:
 
 ## Phase 5 — Compact Vue UI
 
-**Status:** **[PLANNED]**; depends on authoritative backend state and tray lifecycle.
+**Status:** **[IMPLEMENTED]** in the working tree; live Windows acceptance remains pending.
 
 ### Deliverables
 
@@ -683,6 +683,16 @@ Gate coverage, by baseline requirement:
 | WebView2 absent | **[VERIFIED]** detectable | Read `pv` under the WebView2 EdgeUpdate client GUID across HKLM 64-bit, HKLM WOW6432Node, and HKCU |
 | Portable path moved | **[PLANNED]** | Detect/document broken autostart registration |
 | Sensitive CRD event identity | **[VERIFIED]** real | Account email appears in events 1/2/4 and client `ip:port` in event 4; redact and do not persist |
+
+## Phase 5 implementation update (2026-08-18)
+
+**[IMPLEMENTED]** The root module now embeds a compact Vue/Vite control surface into the Windows executable. The window starts hidden and is opened from the tray icon or its `Open` menu item. Closing the window hides it again, leaving the lifecycle service running in the tray.
+
+**[IMPLEMENTED]** The UI keeps CRD, automation, tuning, and recovery ownership visibly separate. It exposes only the actual coordinator-backed commands: Pause/Resume, Restore Now, and Start with Windows. Each command is invoked through generated Wails TypeScript bindings and then re-reads authoritative backend state; the UI does not assume a Windows mutation succeeded.
+
+**[IMPLEMENTED]** Docker now installs the pinned Wails CLI, generates bindings, and builds the Vue assets before Go verification or packaging. The UI follows the system light/dark preference and deliberately does not include a dashboard, Windows Performance Options clone, Visual Effects checklist, or tuning presets.
+
+**[UNVERIFIED]** The live Windows acceptance remains: verify tray opening, close-to-tray, and exposed command behavior using the newly packaged executable.
 
 ## Exact next action
 

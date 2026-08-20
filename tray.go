@@ -12,7 +12,7 @@ import (
 
 // buildTrayMenu creates the system tray context menu that is Remotune's primary
 // user surface until Phase 5 adds a Vue UI window.
-func buildTrayMenu(app *application.App, svc *lifecycle.Service) *application.Menu {
+func buildTrayMenu(app *application.App, mainWindow *application.WebviewWindow, svc *lifecycle.Service) *application.Menu {
 	menu := app.NewMenu()
 
 	// Status line (read-only, updated dynamically).
@@ -59,6 +59,13 @@ func buildTrayMenu(app *application.App, svc *lifecycle.Service) *application.Me
 			return
 		}
 		autostartItem.SetChecked(enable)
+	})
+
+	menu.AddSeparator()
+
+	menu.Add("Open").OnClick(func(ctx *application.Context) {
+		mainWindow.Show()
+		mainWindow.Focus()
 	})
 
 	menu.AddSeparator()

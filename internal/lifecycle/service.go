@@ -159,3 +159,25 @@ func (s *Service) RestoreNow() error {
 	}
 	return coord.RestoreNow()
 }
+
+// GetAutostartStatus returns the authoritative Windows startup registration
+// state. It is exposed to the frontend so the UI never infers the result of a
+// previous toggle.
+func (s *Service) GetAutostartStatus() (AutostartStatus, error) {
+	return GetAutostartStatus()
+}
+
+// SetAutostart changes the Windows startup registration and returns the state
+// read back from the registry after the operation.
+func (s *Service) SetAutostart(enabled bool) (AutostartStatus, error) {
+	if err := SetAutostart(enabled); err != nil {
+		return AutostartStatus{}, err
+	}
+	return GetAutostartStatus()
+}
+
+// PortablePathStatus exposes an actionable diagnostic when the executable has
+// been moved after Start with Windows was enabled.
+func (s *Service) PortablePathStatus() PortablePathStatus {
+	return CheckPortablePath()
+}
