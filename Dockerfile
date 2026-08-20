@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
         unzip \
         git \
+        librsvg2-bin \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Bun (frontend package manager and bundler for Vue/Vite, Phase 5).
@@ -45,9 +46,10 @@ RUN go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.8
 ENV GOOS=windows
 ENV GOARCH=amd64
 ENV CGO_ENABLED=0
+ENV BUILD_VERSION=0.1.3
 
 # Copy full source. In compose, we bind-mount instead for live iteration.
 COPY . .
 
-# Default: build the Windows executable.
-CMD ["go", "build", "-trimpath", "-ldflags=-s -w", "-o", "out/Remotune.exe", "."]
+# Default: build the versioned Windows executable with its icon resource.
+CMD ["sh", "-c", "wails3 generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -out wails_windows_amd64.syso && go build -trimpath -ldflags='-s -w -H windowsgui -X main.version=${BUILD_VERSION}' -o out/remotune-v${BUILD_VERSION}.exe ."]

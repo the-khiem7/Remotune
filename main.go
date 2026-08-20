@@ -22,6 +22,12 @@ var version = "dev"
 //go:embed all:frontend/dist
 var frontendAssets embed.FS
 
+//go:embed assets/app/remotune-256.png
+var appIcon []byte
+
+//go:embed assets/tray/remotune-32.png
+var trayIcon []byte
+
 func main() {
 	// Detect WebView2 before starting Wails — fail clearly if absent.
 	if err := lifecycle.CheckWebView2(); err != nil {
@@ -35,6 +41,7 @@ func main() {
 	app := application.New(application.Options{
 		Name:        "Remotune",
 		Description: "Automatically tunes Windows for remote desktop sessions",
+		Icon:        appIcon,
 		LogLevel:    slog.LevelInfo,
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(frontendAssets),
@@ -67,6 +74,7 @@ func main() {
 
 	// System tray — the primary user surface.
 	tray := app.SystemTray.New()
+	tray.SetIcon(trayIcon)
 	menu := buildTrayMenu(app, mainWindow, svc)
 	tray.SetMenu(menu)
 	tray.SetTooltip("Remotune v" + version)

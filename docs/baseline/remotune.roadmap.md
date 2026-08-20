@@ -694,6 +694,14 @@ Gate coverage, by baseline requirement:
 
 **[UNVERIFIED]** The live Windows acceptance remains: verify tray opening, close-to-tray, and exposed command behavior using the newly packaged executable.
 
+## Application icon update (2026-08-20)
+
+**[IMPLEMENTED]** `assets/branding/remotune.svg` is the canonical editable brand source. It is rendered into `assets/app/remotune-256.png` for Wails application identity, `assets/tray/remotune-32.png` for the Windows notification area, and `build/windows/icon.ico` containing 16, 20, 24, 32, 40, 48, 64, and 256 px images for the executable resource.
+
+**[IMPLEMENTED]** The Wails shell embeds the application and tray PNG assets, calls `tray.SetIcon`, and the Docker verify/build pipelines invoke the pinned `wails3 generate syso` command before compiling. The generated Windows resource object is intentionally ignored because it is reproducible from the committed ICO and manifest.
+
+**[VERIFIED]** On 2026-08-20, Wails CLI `v3.0.0-beta.8` generated the Windows resource successfully; `go test ./... -count=1 -short` passed 70 tests across 8 packages; and the versioned portable artifact `out/remotune-v0.1.3.exe` built successfully. **[UNVERIFIED]** Manual visual acceptance in Windows Explorer, the title bar, taskbar, and notification area remains required on the target machine.
+
 ## Exact next action
 
 Phases 1 through 4 are implemented. The root module compiles and all migrated tests pass. The next step is Phase 5: the compact Vue UI.

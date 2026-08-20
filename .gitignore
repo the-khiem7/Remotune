@@ -1,5 +1,6 @@
 # Build output
 out/
+wails_windows_*.syso
 
 # IDE
 .idea/
