@@ -67,6 +67,8 @@ const status = ref<CoordinatorStatus | null>(null)
 const autostart = ref<AutostartStatus | null>(null)
 const portablePath = ref<PortablePathStatus | null>(null)
 const profiles = ref<ProfileSettings | null>(null)
+const draftCustomEffects = ref<Record<string, boolean>>({})
+const draftDirty = ref(false)
 const busy = ref(false)
 const error = ref('')
 const notice = ref('')
@@ -92,6 +94,7 @@ async function refresh(clearError = true) {
     autostart.value = nextAutostart as AutostartStatus
     portablePath.value = nextPortablePath as PortablePathStatus
     profiles.value = nextProfiles as ProfileSettings
+    if (customEditor && !draftDirty.value) draftCustomEffects.value = { ...profiles.value.customEffects }
     if (clearError) error.value = ''
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause)
@@ -158,7 +161,26 @@ function selectOffAction(action: string) {
 }
 
 function updateCustomEffect(effect: string, enabled: boolean) {
-  return updateProfiles({ crdOnProfile: 'custom', customEffects: { [effect]: enabled } }, 'Custom Visual Effects updated.')
+  draftCustomEffects.value = { ...draftCustomEffects.value, [effect]: enabled }
+  draftDirty.value = true
+  notice.value = ''
+}
+
+function revertCustomEffects() {
+  if (!profiles.value) return
+  draftCustomEffects.value = { ...profiles.value.customEffects }
+  draftDirty.value = false
+  error.value = ''
+  notice.value = ''
+}
+
+function applyCustomEffects() {
+  if (!profiles.value) return Promise.resolve()
+  return run(async () => {
+    profiles.value = await SetProfileSettings({ ...profiles.value, crdOnProfile: 'custom', customEffects: draftCustomEffects.value } as Parameters<typeof SetProfileSettings>[0]) as ProfileSettings
+    draftCustomEffects.value = { ...profiles.value.customEffects }
+    draftDirty.value = false
+  }, 'Custom Visual Effects applied.')
 }
 
 function openCustomEditor() {
@@ -177,10 +199,11 @@ onUnmounted(() => {
 
 <template>
   <main v-if="customEditor" class="custom-editor" aria-live="polite">
-    <header class="editor-header"><div><p class="eyebrow">CRD ON</p><h1>Custom Visual Effects</h1><p>Choose the effects Remotune applies while Chrome Remote Desktop is connected.</p></div></header>
+    <header class="editor-header"><div><p class="eyebrow">CRD ON</p><h1>Custom Visual Effects</h1><p>Choose effects first, then apply the complete profile in one action.</p></div></header>
     <fieldset class="effect-list" :disabled="busy || !profiles"><legend>Visual Effects</legend>
-      <label v-for="effect in visualEffects" :key="effect.key" class="effect-choice"><input type="checkbox" :checked="profiles?.customEffects[effect.key]" @change="updateCustomEffect(effect.key, ($event.target as HTMLInputElement).checked)"><span>{{ effect.label }}</span></label>
+      <label v-for="effect in visualEffects" :key="effect.key" class="effect-choice"><input type="checkbox" :checked="draftCustomEffects[effect.key]" @change="updateCustomEffect(effect.key, ($event.target as HTMLInputElement).checked)"><span>{{ effect.label }}</span></label>
     </fieldset>
+    <footer class="editor-actions"><span :class="{ 'draft-state': true, dirty: draftDirty }">{{ draftDirty ? 'Unsaved changes' : 'No pending changes' }}</span><div><button class="text-button" :disabled="busy || !draftDirty" @click="revertCustomEffects">Revert</button><button class="secondary" :disabled="busy || !draftDirty" @click="applyCustomEffects">Apply changes</button></div></footer>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <p v-if="notice" class="notice" role="status">{{ notice }}</p>
   </main>
@@ -216,8 +239,7 @@ onUnmounted(() => {
         <label v-for="option in [{ value: 'restoreSnapshot', label: 'Revert to snapshot' }, { value: 'windowsChoose', label: 'Let Windows choose' }, { value: 'bestAppearance', label: 'Best Appearance' }, { value: 'bestPerformance', label: 'Best Performance' }]" :key="option.value" class="choice"><input type="radio" name="crd-off" :checked="profiles?.crdOffAction === option.value" @change="selectOffAction(option.value)"><span>{{ option.label }}</span></label>
       </fieldset>
       <div v-if="profiles?.crdOnProfile === 'custom'" class="native-effects">
-        <p>Custom effects are edited in the separate Remotune window beside this popup.</p>
-        <div class="native-actions"><button class="secondary" :disabled="busy" @click="openCustomEditor">Open Custom editor</button></div>
+        <div class="editor-launcher"><div><strong>Custom visual effects</strong><p>Choose the 17 effects Remotune applies during CRD.</p></div><button class="secondary" :disabled="busy" @click="openCustomEditor">Edit effects</button></div>
       </div>
     </section>
 
