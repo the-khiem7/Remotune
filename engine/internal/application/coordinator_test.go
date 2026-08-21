@@ -13,11 +13,6 @@ import (
 	"github.com/khiemnguyen/remotune/engine/internal/wintune"
 )
 
-// fakeVE and fakeTB simulate the Windows adapters without touching the real desktop,
-// so coordinator logic (ownership, persistence timing, verification handling, state
-// transitions) can be tested fast and repeatably. Phase 1 needed real-machine tests to
-// prove the adapters themselves are correct; Phase 3 needs fakes to prove the
-// coordinator's DECISIONS are correct independent of adapter timing.
 type fakeVE struct {
 	mu           sync.Mutex
 	current      wintune.VisualEffectsSnapshot
@@ -126,8 +121,6 @@ func fullCfg() AutomationConfig {
 	return AutomationConfig{Enabled: true, VisualEffects: true, Taskbar: true}
 }
 
-// --- Apply gates ---
-
 func TestApplyPersistsSnapshotBeforeMutating(t *testing.T) {
 	c, ve, _, store := newTestCoordinator(t, fullCfg())
 
@@ -155,9 +148,6 @@ func TestRepeatedApplyDoesNotReplaceOriginalBaseline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load after first apply: %v", err)
 	}
-
-	// A duplicate "connect" observation while already Connected must not re-capture
-	// the now-tuned state as a new baseline (ledger decision 14).
 	if err := c.Observe(crd.StateConnected); err != nil {
 		t.Fatalf("Observe (duplicate connect): %v", err)
 	}
@@ -169,7 +159,6 @@ func TestRepeatedApplyDoesNotReplaceOriginalBaseline(t *testing.T) {
 	if first.CapturedAt != second.CapturedAt {
 		t.Fatal("recovery snapshot was replaced by a duplicate connect; baseline must survive unchanged")
 	}
-	// The apply ACTIONS do re-run (idempotent), but the captured baseline is the same.
 	if ve.applyCalls < 2 {
 		t.Fatalf("apply calls = %d, want at least 2 (idempotent re-apply)", ve.applyCalls)
 	}
@@ -203,8 +192,6 @@ func TestApplyWithNoCategoriesEnabledStaysBaseline(t *testing.T) {
 		t.Fatal("nothing should be applied or persisted when no category is enabled")
 	}
 }
-
-// --- Restore gates ---
 
 func TestRestoreNowRefusesWithNoOwnedSnapshot(t *testing.T) {
 	c, _, _, _ := newTestCoordinator(t, fullCfg())
@@ -266,9 +253,6 @@ func TestRepeatedRestoreAfterSuccessIsNoOp(t *testing.T) {
 	}
 	restoreCallsAfterFirst := ve.restoreCalls
 	_ = tb
-
-	// A second disconnect observation (or any reconcile) while already Baseline with
-	// no ownership must not attempt another restore transaction.
 	if err := c.Observe(crd.StateDisconnected); err != nil {
 		t.Fatalf("Observe (duplicate disconnect): %v", err)
 	}
@@ -277,8 +261,6 @@ func TestRepeatedRestoreAfterSuccessIsNoOp(t *testing.T) {
 			ve.restoreCalls, restoreCallsAfterFirst)
 	}
 }
-
-// --- Pause / Resume / Quit ---
 
 func TestPauseRestoresOwnedStateAndSetsPaused(t *testing.T) {
 	c, _, _, store := newTestCoordinator(t, fullCfg())
@@ -370,11 +352,7 @@ func TestQuitRejectsNewObservations(t *testing.T) {
 	}
 }
 
-// --- Bootstrap / reconciliation gates ---
-
 func TestBootstrapNoOwnershipIsBaselineRegardlessOfCurrentWindowsState(t *testing.T) {
-	// Ledger decision 13: observing a tuned-looking system with no recovery file
-	// must never be assumed to be Remotune's doing.
 	c, ve, _, store := newTestCoordinator(t, fullCfg())
 	ve.current.SPI["MenuAnimation"] = 0 // looks "already tuned"
 
@@ -437,15 +415,6 @@ func TestBootstrapWithOwnershipDisconnectedRestores(t *testing.T) {
 		t.Fatal("snapshot must be retired after the crash-recovery restore succeeds")
 	}
 }
-
-// --- Concurrency / race handling ---
-
-// TestConcurrentObservationsAreSerializedAndLatestWins fires many concurrent Observe
-// calls alternating Connected/Disconnected and asserts the coordinator never panics,
-// corrupts its snapshot, or ends up in an inconsistent Status; and that the final
-// state matches the final observation once everything settles
-// (docs/baseline/remotune.sourcecode.md: "the latest desired state eventually wins
-// after serialized reconciliation").
 func TestConcurrentObservationsAreSerializedAndLatestWins(t *testing.T) {
 	c, _, _, _ := newTestCoordinator(t, fullCfg())
 	if err := c.Bootstrap(crd.StateDisconnected); err != nil {
@@ -466,8 +435,6 @@ func TestConcurrentObservationsAreSerializedAndLatestWins(t *testing.T) {
 		}(state)
 	}
 	wg.Wait()
-
-	// Settle deterministically: the last serialized call wins.
 	if err := c.Observe(crd.StateConnected); err != nil {
 		t.Fatalf("final Observe: %v", err)
 	}
@@ -475,10 +442,6 @@ func TestConcurrentObservationsAreSerializedAndLatestWins(t *testing.T) {
 		t.Fatalf("tuning state after settling = %s, want Active", got)
 	}
 }
-
-// TestDisconnectDuringApplyReconcilesToRestored simulates the specific scenario named
-// in the baseline's critical scenario gates: "Connect followed by disconnect during
-// apply; serialize transitions; latest desired state eventually wins."
 func TestDisconnectDuringApplyReconcilesToRestored(t *testing.T) {
 	c, _, _, store := newTestCoordinator(t, fullCfg())
 
@@ -501,10 +464,6 @@ func TestDisconnectDuringApplyReconcilesToRestored(t *testing.T) {
 }
 
 func TestStatusDoesNotBlockDuringLongRunningTransition(t *testing.T) {
-	// Status() must remain responsive even while a transition holds the lock, since
-	// diagnostics/UI polling must not itself become a source of deadlock. This test
-	// exercises it sequentially (Go's mutex has no way to "peek"), so it mainly
-	// guards against Status() acquiring a second, different lock incorrectly.
 	c, _, _, _ := newTestCoordinator(t, fullCfg())
 	if err := c.Bootstrap(crd.StateConnected); err != nil {
 		t.Fatalf("Bootstrap: %v", err)
@@ -520,8 +479,6 @@ func TestStatusDoesNotBlockDuringLongRunningTransition(t *testing.T) {
 		t.Fatal("Status() did not return within 2s")
 	}
 }
-
-// --- Startup Run() wiring, with a fake detector ---
 
 type fakeBootstrapper struct {
 	boot crd.BootstrapResult

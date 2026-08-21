@@ -60,11 +60,6 @@ func TestReconstructStillConnected(t *testing.T) {
 		t.Fatalf("active sessions = %v, want exactly sessA", s.ActiveSessions)
 	}
 }
-
-// TestReconstructHostRestartDropsStaleConnect reproduces the exact anomaly measured in
-// Phase 0: a CONNECT -> CONNECT sequence where the host ProcessID changes, meaning the
-// first connect's disconnect was lost because the host process died. Ledger decisions
-// 35 and 36 require this to be treated as disconnected, never as still-active.
 func TestReconstructHostRestartDropsStaleConnect(t *testing.T) {
 	events := []Transition{
 		tr(KindConnected, 1, 0, 22864, "sessA"), // old host lifetime, never disconnected
@@ -81,17 +76,11 @@ func TestReconstructHostRestartDropsStaleConnect(t *testing.T) {
 		t.Fatalf("current host PID = %d, want 6544", s.CurrentHostPID)
 	}
 }
-
-// TestReconstructDisconnectAfterHostRestartIsDropped mirrors a disconnect arriving
-// for a session that belonged to an already-discarded host lifetime.
 func TestReconstructDisconnectAfterHostRestartIsDropped(t *testing.T) {
 	events := []Transition{
 		tr(KindConnected, 1, 0, 100, "sessA"),
 		tr(KindConnected, 2, 5, 200, "sessB"),    // host restart; sessA's lifetime is gone
 		tr(KindDisconnected, 3, 6, 200, "sessA"), // a disconnect for a session that no
-		// longer exists in the active set (different, dead lifetime's session ID
-		// reappearing is implausible in practice, but the detector must not crash or
-		// misattribute it to sessB)
 	}
 	s := Reconstruct(events)
 	if s.DroppedDisconnects != 1 {
@@ -127,10 +116,6 @@ func TestReconstructDuplicateDisconnectDoesNotCorrupt(t *testing.T) {
 		t.Fatalf("dropped disconnects = %d, want 1 for the duplicate", s.DroppedDisconnects)
 	}
 }
-
-// TestReconstructMultipleConcurrentSessions exercises the active-client SET, not a
-// single boolean, per ledger decision 34: the model must not assume only one client
-// even though Phase 0 observed no overlap in 191 real events.
 func TestReconstructMultipleConcurrentSessions(t *testing.T) {
 	events := []Transition{
 		tr(KindConnected, 1, 0, 100, "sessA"),
@@ -147,7 +132,6 @@ func TestReconstructMultipleConcurrentSessions(t *testing.T) {
 }
 
 func TestReconstructOutOfOrderInput(t *testing.T) {
-	// Reconstruct must sort by time/record ID itself; callers should not have to.
 	events := []Transition{
 		tr(KindDisconnected, 2, 5, 100, "sessA"),
 		tr(KindConnected, 1, 0, 100, "sessA"),

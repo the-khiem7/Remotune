@@ -1,15 +1,5 @@
 //go:build windows
 
-// Command crdwatch is the Phase 2 Group B observation tool.
-//
-// It bootstraps from history (bookmark included), then subscribes starting after that
-// bookmark so no transition between bootstrap and subscription can be lost, and polls
-// continuously, appending every observed transition to a log file. It is meant to be
-// started BEFORE the operator disconnects their CRD session, left running through the
-// disconnect and reconnect (which happen outside this process's control), and read back
-// afterward.
-//
-//	crdwatch <logfile>
 package main
 
 import (

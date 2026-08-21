@@ -7,13 +7,6 @@ import (
 	"time"
 )
 
-// TestSubscribeReplaysFromMidHistoryBookmark isolates the EvtSubscribe binding from any
-// dependency on a NEW live event. It seeds a bookmark somewhere in the middle of the
-// existing, already-recorded history, subscribes from it, and expects the events
-// AFTER that bookmark to replay immediately (this is exactly the mechanism Phase 0
-// proved manually with PowerShell: EventLogWatcher(bookmark, readExisting=true)
-// replayed 5/5 expected records). If this test fails to receive anything, the bug is
-// in the Go binding, independent of whether a real new CRD event ever arrives.
 func TestSubscribeReplaysFromMidHistoryBookmark(t *testing.T) {
 	hist, err := QueryHistory()
 	if err != nil {
@@ -22,9 +15,6 @@ func TestSubscribeReplaysFromMidHistoryBookmark(t *testing.T) {
 	if len(hist.Transitions) < 6 {
 		t.Skip("not enough history on this machine to pick a mid-point bookmark")
 	}
-
-	// Re-query to get real EVT_HANDLEs (QueryHistory already closed its handles), and
-	// position a bookmark on the event 5 from the end, so the last 4 should replay.
 	q, err := evtQuery(Channel, XPath, false)
 	if err != nil {
 		t.Fatalf("evtQuery: %v", err)
@@ -93,9 +83,6 @@ func TestSubscribeReplaysFromMidHistoryBookmark(t *testing.T) {
 		t.Errorf("replayed %d transitions, want %d (this isolates the Go EvtSubscribe binding, not live delivery)", len(got), expectedReplay)
 	}
 }
-
-// TestBookmarkRoundTripsThroughXML isolates whether EvtCreateBookmark(renderedXML)
-// actually reconstructs a usable bookmark, independent of EvtSubscribe entirely.
 func TestBookmarkRoundTripsThroughXML(t *testing.T) {
 	hist, err := QueryHistory()
 	if err != nil {
@@ -111,19 +98,12 @@ func TestBookmarkRoundTripsThroughXML(t *testing.T) {
 		t.Fatalf("evtCreateBookmark(renderedXML) failed: %v", err)
 	}
 	defer evtClose(bm)
-
-	// Re-render it and see if it round-trips to something equivalent.
 	again, err := evtRenderBookmarkXML(bm)
 	if err != nil {
 		t.Fatalf("re-render bookmark: %v", err)
 	}
 	t.Logf("re-rendered:  %s", again)
 }
-
-// TestWaitForSignalFiresAfterSubscribeWithExistingBacklog checks the raw primitive:
-// does WaitForSingleObject ever return signaled at all after EvtSubscribe is given a
-// bookmark with events waiting after it? This isolates the wait/reset mechanism from
-// EvtNext and from Transition parsing.
 func TestWaitForSignalFiresAfterSubscribeWithExistingBacklog(t *testing.T) {
 	hist, err := QueryHistory()
 	if err != nil {
@@ -132,9 +112,6 @@ func TestWaitForSignalFiresAfterSubscribeWithExistingBacklog(t *testing.T) {
 	if hist.Bookmark == "" || len(hist.Transitions) < 2 {
 		t.Skip("not enough history")
 	}
-
-	// Seed a bookmark a few events back from the newest so there is definitely
-	// backlog after it, using the SAME mid-history anchoring as the replay test.
 	q, err := evtQuery(Channel, XPath, false)
 	if err != nil {
 		t.Fatalf("evtQuery: %v", err)

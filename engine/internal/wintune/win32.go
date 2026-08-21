@@ -1,10 +1,5 @@
 //go:build windows
 
-// Package wintune contains the Windows adapters for Remotune's tuning engine.
-//
-// It deliberately has no dependency on Wails or on any UI framework, so it can be
-// built and tested headlessly and later migrated into the CLI-generated application
-// project without redesign.
 package wintune
 
 import (
@@ -23,28 +18,11 @@ var (
 	procGSM = user32.NewProc("GetSystemMetrics")
 )
 
-// SystemParametersInfo flags.
 const (
 	spifUpdateIniFile = 0x01
 	spifSendChange    = 0x02
-
-	// spifWrite is the flag combination used for per-effect writes.
-	//
-	// SPIF_UPDATEINIFILE is deliberately NOT included. That flag makes each write persist
-	// itself by read-modify-writing the shared UserPreferencesMask byte, and consecutive
-	// writes to effects that share a byte were measured racing and losing each other's
-	// bits. Worse, a later write could resurrect a byte from a stale copy and undo an
-	// explicit mask write, so the two layers never converged.
-	//
-	// The adapter therefore splits the responsibilities: SystemParametersInfo changes only
-	// the live session, and persistence is done by writing the complete mask and the
-	// discrete registry values explicitly. This is the same rule the taskbar adapter
-	// follows after its divergence defect: write each layer deliberately instead of hoping
-	// one propagates to the other.
-	spifWrite = spifSendChange
+	spifWrite         = spifSendChange
 )
-
-// SystemParametersInfo actions used by the Visual Effects adapter.
 const (
 	spiGetDragFullWindows        = 0x0026
 	spiSetDragFullWindows        = 0x0025
@@ -84,17 +62,12 @@ const (
 	spiGetClientAreaAnimation    = 0x1042
 	spiSetClientAreaAnimation    = 0x1043
 )
-
-// Appbar messages and state bits.
 const (
 	abmGetState      = 0x00000004
 	abmGetTaskbarPos = 0x00000005
 	abmSetState      = 0x0000000A
-
-	// ABSAutoHide is the ABS_AUTOHIDE bit. It is the only bit Remotune ever changes.
-	ABSAutoHide = 0x00000001
-	// ABSAlwaysOnTop is preserved, never written by Remotune.
-	ABSAlwaysOnTop = 0x00000002
+	ABSAutoHide      = 0x00000001
+	ABSAlwaysOnTop   = 0x00000002
 )
 
 const (
@@ -124,22 +97,13 @@ type appBarData struct {
 	LParam           int32
 	_                int32 // pad so the struct matches the 64-bit layout
 }
-
-// spiStyle records how a given SystemParametersInfo action carries its value.
-//
-// This distinction is load-bearing: passing the value in the wrong slot silently
-// fails or writes the wrong setting.
 type spiStyle int
 
 const (
-	// styleUIParam carries the value in uiParam with pvParam nil.
 	styleUIParam spiStyle = iota
-	// stylePvParam carries the value in pvParam as a BOOL.
 	stylePvParam
 )
 
-// spiGetBool reads a boolean-style setting. Every documented get action writes into
-// pvParam, regardless of how its matching set action carries the value.
 func spiGetBool(action uint32) (int32, error) {
 	var v int32
 	r, _, err := procSPI.Call(
@@ -199,15 +163,11 @@ func spiSetMinAnimate(value int32) error {
 	}
 	return nil
 }
-
-// appBarGetState returns the raw ABM_GETSTATE bits.
 func appBarGetState() uint32 {
 	d := appBarData{CbSize: uint32(unsafe.Sizeof(appBarData{}))}
 	r, _, _ := procABM.Call(uintptr(abmGetState), uintptr(unsafe.Pointer(&d)))
 	return uint32(r)
 }
-
-// appBarSetState writes the full state word. Callers must preserve unrelated bits.
 func appBarSetState(state uint32) error {
 	d := appBarData{
 		CbSize: uint32(unsafe.Sizeof(appBarData{})),
@@ -215,15 +175,10 @@ func appBarSetState(state uint32) error {
 	}
 	r, _, err := procABM.Call(uintptr(abmSetState), uintptr(unsafe.Pointer(&d)))
 	if r == 0 {
-		// SHAppBarMessage returns FALSE for ABM_SETSTATE on some builds even on
-		// success, so this is reported but not treated as fatal by callers that
-		// verify the observable outcome instead.
 		return fmt.Errorf("SHAppBarMessage ABM_SETSTATE: %w", err)
 	}
 	return nil
 }
-
-// broadcastSettingChange notifies the shell that user settings changed.
 func broadcastSettingChange(area string) {
 	p, err := windows.UTF16PtrFromString(area)
 	if err != nil {
@@ -245,8 +200,6 @@ func getSystemMetrics(index int32) int32 {
 	r, _, _ := procGSM.Call(uintptr(index))
 	return int32(r)
 }
-
-// primaryWorkArea returns the primary monitor work area.
 func primaryWorkArea() (rect, error) {
 	var rc rect
 	r, _, err := procSPI.Call(

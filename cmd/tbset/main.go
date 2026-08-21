@@ -1,11 +1,5 @@
 //go:build windows
 
-// Command tbset is a tiny operator utility to read or set taskbar auto-hide through
-// the durable both-layer path. It exists so the state can be inspected and corrected
-// without running the test suite.
-//
-//	tbset            print current state
-//	tbset on|off     set auto-hide and verify
 package main
 
 import (

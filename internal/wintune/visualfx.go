@@ -11,7 +11,6 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-// effect is one Visual Effects value reachable through SystemParametersInfo.
 type effect struct {
 	name  string
 	get   uint32
@@ -19,10 +18,6 @@ type effect struct {
 	style spiStyle
 }
 
-// spiEffects are every per-effect value Remotune captures.
-//
-// Capturing more than Remotune changes is deliberate: the snapshot must describe the
-// user's whole state, not only the part the performance preset touches.
 var spiEffects = []effect{
 	{"DragFullWindows", spiGetDragFullWindows, spiSetDragFullWindows, styleUIParam},
 	{"FontSmoothing", spiGetFontSmoothing, spiSetFontSmoothing, styleUIParam},
@@ -43,14 +38,8 @@ var spiEffects = []effect{
 	{"ClientAreaAnimation", spiGetClientAreaAnimation, spiSetClientAreaAnimation, stylePvParam},
 }
 
-// minAnimateKey is the SPI map entry for the ANIMATIONINFO-based value.
 const minAnimateKey = "MinAnimate"
 
-// bestPerformanceOff lists the effects the Windows performance preset turns off.
-//
-// The seven effects absent from this list are left alone on purpose: the real Windows
-// preset does not touch them, so forcing them off would diverge from the behaviour
-// Remotune claims to automate.
 var bestPerformanceOff = []string{
 	"DragFullWindows",
 	"FontSmoothing",
@@ -72,14 +61,9 @@ const (
 	keyDWM           = `Software\Microsoft\Windows\DWM`
 
 	maskValueName = "UserPreferencesMask"
-
-	// labelKey is the preset label. Windows rewrites it asynchronously when individual
-	// effects change, so it is written last and separately.
-	labelKey = "VisualFXSetting"
+	labelKey      = "VisualFXSetting"
 )
 
-// labelSettle is how long to let Windows finish re-labelling the configuration before
-// writing the intended label over it.
 var labelSettle = 400 * time.Millisecond
 
 type regTarget struct {
@@ -87,8 +71,6 @@ type regTarget struct {
 	name string
 }
 
-// veRegistry are the discrete values Remotune captures. Several have no SPI accessor
-// at all, which is why SystemParametersInfo alone cannot describe the state.
 var veRegistry = map[string]regTarget{
 	"VisualFXSetting":               {keyVisualEffects, "VisualFXSetting"},
 	"Desktop.DragFullWindows":       {keyDesktop, "DragFullWindows"},
@@ -104,13 +86,6 @@ var veRegistry = map[string]regTarget{
 	"DWM.AlwaysHibernateThumbnails": {keyDWM, "AlwaysHibernateThumbnails"},
 	"DWM.Composition":               {keyDWM, "Composition"},
 }
-
-// bestPerformanceRegistry are the registry values the preset writes, with the numeric
-// target. Note IconsOnly rises to 1 while everything else falls to 0, so a blanket
-// "zero everything" apply would be wrong.
-//
-// FontSmoothingType, MenuShowDelay and DWM.Composition are intentionally absent: the
-// preset leaves them untouched.
 var bestPerformanceRegistry = map[string]uint32{
 	"VisualFXSetting":               2,
 	"Desktop.DragFullWindows":       0,
@@ -123,27 +98,13 @@ var bestPerformanceRegistry = map[string]uint32{
 	"DWM.EnableAeroPeek":            0,
 	"DWM.AlwaysHibernateThumbnails": 0,
 }
-
-// maskClearBits are the UserPreferencesMask bits the performance preset clears, per byte.
-//
-// Apply clears exactly these and preserves every other bit, which keeps the two bits
-// that could not be attributed to any documented effect intact. Retained as an
-// independent cross-check against the attribution table below.
 var maskClearBits = [8]byte{0x0E, 0x2C, 0x04, 0x00, 0x02, 0x00, 0x00, 0x00}
 
-// maskBit locates an effect inside UserPreferencesMask.
 type maskBit struct {
 	index int
 	bit   byte
 }
 
-// maskBitFor maps each effect to the mask bit it owns, established by toggling every
-// effect and observing which bit moved.
-//
-// Two set bits are deliberately absent because nothing was found to own them:
-// byte[2]:0x01 and byte[4]:0x10. They are carried through untouched.
-// DragFullWindows and FontSmoothing are absent because they own no mask bit at all and
-// live only in the registry.
 var maskBitFor = map[string]maskBit{
 	"MenuAnimation":          {0, 0x02},
 	"ComboBoxAnimation":      {0, 0x04},
@@ -162,13 +123,6 @@ var maskBitFor = map[string]maskBit{
 	"ClientAreaAnimation":    {4, 0x02},
 }
 
-// maskFromSPI derives the mask implied by a set of per-effect values, starting from base
-// so that unattributed bits survive.
-//
-// This keeps the two layers consistent by construction. Writing per-effect values while
-// leaving the mask describing something else is the same defect class as the taskbar
-// divergence: the live session and the persisted value disagree, and a reload can then
-// undo the change.
 func maskFromSPI(spi map[string]int32, base []byte) []byte {
 	out := make([]byte, len(base))
 	copy(out, base)
@@ -186,10 +140,8 @@ func maskFromSPI(spi map[string]int32, base []byte) []byte {
 	return out
 }
 
-// VisualEffectsManager captures, applies and restores Windows Visual Effects state.
 type VisualEffectsManager struct{}
 
-// Snapshot captures all three layers of the current state.
 func (m *VisualEffectsManager) Snapshot() (*VisualEffectsSnapshot, error) {
 	spi := make(map[string]int32, len(spiEffects)+1)
 	for _, e := range spiEffects {
@@ -209,7 +161,6 @@ func (m *VisualEffectsManager) Snapshot() (*VisualEffectsSnapshot, error) {
 	for logical, t := range veRegistry {
 		v, err := readRegValue(t)
 		if err != nil {
-			// A value that is genuinely absent is skipped rather than invented.
 			continue
 		}
 		reg[logical] = v
@@ -222,34 +173,18 @@ func (m *VisualEffectsManager) Snapshot() (*VisualEffectsSnapshot, error) {
 
 	return &VisualEffectsSnapshot{SPI: spi, Registry: reg, Mask: mask}, nil
 }
-
-// GetCurrentState is an alias for Snapshot used where no mutation is intended.
 func (m *VisualEffectsManager) GetCurrentState() (*VisualEffectsSnapshot, error) {
 	return m.Snapshot()
 }
 
-// convergeAttempts bounds how many times a write sequence is re-asserted before the
-// transition is reported as failed.
-//
-// One pass is not sufficient. The shell reloads user settings asynchronously, so a write
-// that succeeded can still be observed as not-yet-applied, or be transiently overwritten
-// by a reload that was already in flight. Rather than trusting the write or sleeping
-// longer and hoping, each pass re-asserts only the values that do not yet match and the
-// loop exits as soon as the observed state equals the target.
 const convergeAttempts = 4
 
-// BestPerformanceTarget computes the state Windows' "Adjust for best performance" would
-// produce from the given starting state.
-//
-// It is expressed as a transformation of the current state rather than as a stored
-// target, so no machine-specific value from another system is ever propagated.
 func BestPerformanceTarget(before *VisualEffectsSnapshot) *VisualEffectsSnapshot {
 	target := &VisualEffectsSnapshot{
 		SPI:      make(map[string]int32, len(before.SPI)),
 		Registry: make(map[string]RegValue, len(before.Registry)),
 		Mask:     make([]byte, len(before.Mask)),
 	}
-	// start from the current state so untouched values are carried through unchanged
 	for k, v := range before.SPI {
 		target.SPI[k] = v
 	}
@@ -274,19 +209,9 @@ func BestPerformanceTarget(before *VisualEffectsSnapshot) *VisualEffectsSnapshot
 			target.Registry[logical] = RegValue{Kind: RegKindDWord, DWord: n}
 		}
 	}
-
-	// Derive the mask from the per-effect targets so the two layers cannot disagree.
-	// For this transformation the result is identical to clearing maskClearBits, which
-	// TestMaskDerivationMatchesClearBits asserts.
 	target.Mask = maskFromSPI(target.SPI, before.Mask)
 	return target
 }
-
-// writeState writes every value in target, in the order established empirically.
-//
-// SPI first: a SystemParametersInfo write has side effects on values Remotune also
-// records, so the explicit registry and mask writes must follow it to win.
-// Mask last: it is the only step that can carry the bits SPI cannot express.
 func writeState(target *VisualEffectsSnapshot, only map[string]bool) error {
 	want := func(key string) bool { return only == nil || only[key] }
 
@@ -304,8 +229,6 @@ func writeState(target *VisualEffectsSnapshot, only map[string]bool) error {
 			return err
 		}
 	}
-
-	// Everything except the preset label.
 	for logical, v := range target.Registry {
 		t, ok := veRegistry[logical]
 		if !ok || logical == labelKey || !want("registry."+logical) {
@@ -321,13 +244,6 @@ func writeState(target *VisualEffectsSnapshot, only map[string]bool) error {
 			return err
 		}
 	}
-
-	// The preset label goes LAST and on its own.
-	//
-	// Changing individual effects makes Windows re-label the configuration as Custom, and
-	// it does so asynchronously. Writing the label before or alongside the effect writes
-	// meant Windows overwrote it immediately afterwards, so the value never converged no
-	// matter how many times it was re-asserted.
 	if v, ok := target.Registry[labelKey]; ok && want("registry."+labelKey) {
 		time.Sleep(labelSettle)
 		if err := writeRegValue(veRegistry[labelKey], v); err != nil {
@@ -336,8 +252,6 @@ func writeState(target *VisualEffectsSnapshot, only map[string]bool) error {
 	}
 	return nil
 }
-
-// convergeTo drives the system to target, re-asserting only what has not landed yet.
 func (m *VisualEffectsManager) convergeTo(target *VisualEffectsSnapshot) (*VisualEffectsSnapshot, []string, error) {
 	var observed *VisualEffectsSnapshot
 	var diff []string
@@ -347,12 +261,6 @@ func (m *VisualEffectsManager) convergeTo(target *VisualEffectsSnapshot) (*Visua
 		if err := writeState(target, only); err != nil {
 			return nil, nil, err
 		}
-		// No global WM_SETTINGCHANGE broadcast inside the loop.
-		//
-		// Each per-effect write already notifies via SPIF_SENDCHANGE. An extra global
-		// broadcast made the shell reload user settings from the registry part-way through
-		// the sequence, pulling the live session back to whatever the mask said at that
-		// instant and undoing writes that had already landed.
 		time.Sleep(settleVisualEffects)
 
 		var err error
@@ -362,12 +270,9 @@ func (m *VisualEffectsManager) convergeTo(target *VisualEffectsSnapshot) (*Visua
 		}
 		diff = DiffVisualEffects(target, observed)
 		if len(diff) == 0 {
-			// One broadcast at the end, once the persisted state already matches the
-			// target, so a reload can only confirm it.
 			broadcastSettingChange("WindowMetrics")
 			return observed, nil, nil
 		}
-		// Next pass re-asserts only the values still diverging.
 		only = make(map[string]bool, len(diff))
 		for _, k := range diff {
 			only[k] = true
@@ -375,12 +280,6 @@ func (m *VisualEffectsManager) convergeTo(target *VisualEffectsSnapshot) (*Visua
 	}
 	return observed, diff, nil
 }
-
-// ApplyBestPerformance applies the Windows performance preset as a transformation.
-//
-// It changes only what the real preset changes and never replays a captured target
-// state, because a captured Best Performance snapshot carries machine-specific values
-// that must not be pushed onto other machines.
 func (m *VisualEffectsManager) ApplyBestPerformance() (CategoryResult, error) {
 	res := CategoryResult{Category: CategoryVisualEffects}
 
@@ -409,12 +308,6 @@ func (m *VisualEffectsManager) ApplyBestPerformance() (CategoryResult, error) {
 	res.Verified = true
 	return res, nil
 }
-
-// Restore returns the system to a captured state, converging until the observed state
-// matches the snapshot exactly.
-//
-// A nil or incomplete snapshot is never guessed around: the caller is told no restorable
-// state exists instead of being handed an invented baseline.
 func (m *VisualEffectsManager) Restore(s *VisualEffectsSnapshot) (CategoryResult, error) {
 	res := CategoryResult{Category: CategoryVisualEffects}
 	if s == nil {
@@ -431,10 +324,6 @@ func (m *VisualEffectsManager) Restore(s *VisualEffectsSnapshot) (CategoryResult
 		res.Err = err
 		return res, err
 	}
-
-	// Repair any disagreement between the snapshot's per-effect values and its mask
-	// before writing. For a snapshot captured from a real system this is a no-op because
-	// the layers already agree; it only matters for a hand-built target.
 	target := &VisualEffectsSnapshot{
 		SPI:      s.SPI,
 		Registry: s.Registry,
@@ -464,9 +353,6 @@ func findEffect(name string) (effect, bool) {
 	}
 	return effect{}, false
 }
-
-// verifyBestPerformance confirms the observable outcome of an apply: every effect the
-// preset turns off reads as off, and no untouched effect was disturbed.
 func verifyBestPerformance(s *VisualEffectsSnapshot) error {
 	for _, name := range bestPerformanceOff {
 		if v, ok := s.SPI[name]; ok && v != 0 {
@@ -484,8 +370,6 @@ func verifyBestPerformance(s *VisualEffectsSnapshot) error {
 	}
 	return nil
 }
-
-// DiffVisualEffects lists the logical keys whose values differ between two states.
 func DiffVisualEffects(a, b *VisualEffectsSnapshot) []string {
 	var diff []string
 	if a == nil || b == nil {
@@ -542,8 +426,6 @@ func writeMask(b []byte) error {
 	defer k.Close()
 	return k.SetBinaryValue(maskValueName, b)
 }
-
-// readRegValue reads a value preserving whether it is stored as a string or a dword.
 func readRegValue(t regTarget) (RegValue, error) {
 	k, err := registry.OpenKey(registry.CURRENT_USER, t.key, registry.QUERY_VALUE)
 	if err != nil {
@@ -572,9 +454,6 @@ func writeRegValue(t regTarget, v RegValue) error {
 	}
 	return k.SetDWordValue(t.name, v.DWord)
 }
-
-// writeRegNumeric writes a numeric target while preserving the value's existing type,
-// so a REG_SZ holding digits is not silently converted to REG_DWORD.
 func writeRegNumeric(t regTarget, n uint32) error {
 	existing, err := readRegValue(t)
 	kind := RegKindDWord
@@ -587,7 +466,4 @@ func writeRegNumeric(t regTarget, n uint32) error {
 	return writeRegValue(t, RegValue{Kind: RegKindDWord, DWord: n})
 }
 
-// settleVisualEffects is how long to wait after the broadcast before re-reading.
-// Measured stable at 800 ms; a shorter wait produced intermittent reads that caught the
-// shell mid-reload.
 var settleVisualEffects = 800 * time.Millisecond

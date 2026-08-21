@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-// Mutating tests reconfigure the live desktop, so they are opt-in. Set
-// REMOTUNE_SYSTEM_TESTS=1 to run them. They always restore the original state.
 const systemTestEnv = "REMOTUNE_SYSTEM_TESTS"
 
 func requireSystemTests(t *testing.T) {
@@ -19,8 +17,6 @@ func requireSystemTests(t *testing.T) {
 		t.Skipf("skipping system-mutating test; set %s=1 to run", systemTestEnv)
 	}
 }
-
-// ---------- pure tests ----------
 
 func TestSnapshotValidate(t *testing.T) {
 	good := &VisualEffectsSnapshot{
@@ -91,8 +87,6 @@ func TestResultPartialAndVerified(t *testing.T) {
 	if partial.Err() == nil {
 		t.Fatal("partial failure must surface an error")
 	}
-
-	// A write that succeeded but was not confirmed is not full success either.
 	unverified := Result{Categories: []CategoryResult{{Category: CategoryTaskbar, Changed: true}}}
 	if unverified.FullyVerified() {
 		t.Fatal("unverified write must not report full success")
@@ -115,7 +109,6 @@ func TestRestoreRefusesMissingSnapshot(t *testing.T) {
 }
 
 func TestBestPerformanceLeavesUntouchedEffectsAlone(t *testing.T) {
-	// Guards the correctness property that the preset does not disable everything.
 	untouched := []string{
 		"GradientCaptions", "KeyboardCues", "HotTracking",
 		"MenuFade", "TooltipFade", "FlatMenu", "UIEffects",
@@ -130,7 +123,6 @@ func TestBestPerformanceLeavesUntouchedEffectsAlone(t *testing.T) {
 	if len(bestPerformanceOff) != 10 {
 		t.Fatalf("bestPerformanceOff has %d entries, want the 10 the preset changes", len(bestPerformanceOff))
 	}
-	// IconsOnly is the one value that rises.
 	if bestPerformanceRegistry["Advanced.IconsOnly"] != 1 {
 		t.Fatal("Advanced.IconsOnly must be raised to 1, not zeroed")
 	}
@@ -141,7 +133,6 @@ func TestMaskClearBitsMatchRecordedEvidence(t *testing.T) {
 	if maskClearBits != want {
 		t.Fatalf("maskClearBits = %v, want %v", maskClearBits, want)
 	}
-	// The two unexplained bits must never appear in the clear mask.
 	if maskClearBits[2]&0x01 != 0 {
 		t.Fatal("byte[2]:0x01 is unexplained and must be preserved")
 	}
@@ -149,8 +140,6 @@ func TestMaskClearBitsMatchRecordedEvidence(t *testing.T) {
 		t.Fatal("byte[4]:0x10 is unexplained and must be preserved")
 	}
 }
-
-// ---------- read-only system tests ----------
 
 func TestSnapshotCapturesAllThreeLayers(t *testing.T) {
 	var m VisualEffectsManager
@@ -182,11 +171,6 @@ func TestTaskbarReadsBothLayers(t *testing.T) {
 			s.Live, s.Persisted)
 	}
 }
-
-// ---------- mutating system tests ----------
-
-// TestTaskbarRoundTripBothDirections covers the acceptance-gate case Phase 0 missed:
-// a baseline of auto-hide OFF must stay OFF, not be forced ON.
 func TestTaskbarRoundTripBothDirections(t *testing.T) {
 	requireSystemTests(t)
 	var m TaskbarManager
@@ -213,8 +197,6 @@ func TestTaskbarRoundTripBothDirections(t *testing.T) {
 			if base.AutoHide != baseline {
 				t.Fatalf("baseline is %v, want %v", base.AutoHide, baseline)
 			}
-
-			// Remotune's override always disables auto-hide.
 			if _, err := m.SetAutoHide(false); err != nil {
 				t.Fatalf("apply failed: %v", err)
 			}
@@ -240,9 +222,6 @@ func TestTaskbarRoundTripBothDirections(t *testing.T) {
 		})
 	}
 }
-
-// TestVisualEffectsCustomRoundTrip is the Phase 1 acceptance gate: an arbitrary Custom
-// configuration must survive an ApplyBestPerformance / Restore cycle exactly.
 func TestVisualEffectsCustomRoundTrip(t *testing.T) {
 	requireSystemTests(t)
 	var m VisualEffectsManager
@@ -256,13 +235,6 @@ func TestVisualEffectsCustomRoundTrip(t *testing.T) {
 			t.Errorf("FAILED TO RESTORE visual effects: %v", err)
 		}
 	})
-
-	// Establish an arbitrary Custom state that matches neither preset by writing the
-	// individual effects, then capture what Windows actually holds.
-	//
-	// The state is NOT built as a synthetic snapshot and handed to Restore: a hand-made
-	// snapshot can describe per-effect values and a mask that contradict each other,
-	// which is not a state Windows can ever be in and therefore not a fair test.
 	wantCustom := map[string]int32{
 		"MenuAnimation":          0,
 		"ComboBoxAnimation":      1,
@@ -276,12 +248,6 @@ func TestVisualEffectsCustomRoundTrip(t *testing.T) {
 		"DropShadow":             1,
 		"ClientAreaAnimation":    0,
 	}
-	// Build a fully self-consistent target and converge to it through Restore.
-	//
-	// Writing the per-effect values directly while leaving the mask describing something
-	// else made this test flaky, because the live session and the persisted mask
-	// disagreed and a shell reload could undo the writes. Restore derives the mask from
-	// the per-effect values, so the two layers agree by construction.
 	customTarget := cloneVE(original)
 	for name, v := range wantCustom {
 		customTarget.SPI[name] = v
@@ -294,8 +260,6 @@ func TestVisualEffectsCustomRoundTrip(t *testing.T) {
 	if _, err := m.Restore(customTarget); err != nil {
 		t.Fatalf("could not establish the custom baseline: %v", err)
 	}
-
-	// This captured state, not the wish list above, is the baseline to round-trip.
 	baseline, err := m.Snapshot()
 	if err != nil {
 		t.Fatalf("custom baseline snapshot failed: %v", err)
@@ -316,8 +280,6 @@ func TestVisualEffectsCustomRoundTrip(t *testing.T) {
 	if !applyRes.Verified {
 		t.Fatal("apply was not verified")
 	}
-
-	// The two unexplained mask bits must survive the apply.
 	afterApply, err := m.Snapshot()
 	if err != nil {
 		t.Fatalf("snapshot after apply failed: %v", err)
@@ -381,8 +343,6 @@ func TestApplyBestPerformanceIsIdempotent(t *testing.T) {
 	}
 }
 
-// ---------- helpers ----------
-
 func cloneVE(s *VisualEffectsSnapshot) *VisualEffectsSnapshot {
 	out := &VisualEffectsSnapshot{
 		SPI:      make(map[string]int32, len(s.SPI)),
@@ -412,18 +372,11 @@ func assertBitPreserved(t *testing.T, label string, before, after []byte, idx in
 }
 
 func init() {
-	// Keep the settle delay tolerable when the whole suite runs.
 	if os.Getenv(systemTestEnv) == "1" {
 		settleDelay = 1500 * time.Millisecond
 	}
 }
-
-// TestMaskDerivationMatchesClearBits cross-checks the two independent descriptions of
-// what the performance preset does to UserPreferencesMask: the recorded clear-mask, and
-// the per-effect attribution table. They must agree, and neither may touch the two bits
-// nothing was found to own.
 func TestMaskDerivationMatchesClearBits(t *testing.T) {
-	// Start from a mask with every bit set so any disagreement shows up.
 	base := []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 
 	spi := map[string]int32{}
@@ -450,8 +403,6 @@ func TestMaskDerivationMatchesClearBits(t *testing.T) {
 				i, derived[i], viaClearBits[i])
 		}
 	}
-
-	// The unexplained bits must survive both paths.
 	if derived[2]&0x01 == 0 {
 		t.Error("byte[2]:0x01 is unexplained and must be preserved by the derivation")
 	}
@@ -459,9 +410,6 @@ func TestMaskDerivationMatchesClearBits(t *testing.T) {
 		t.Error("byte[4]:0x10 is unexplained and must be preserved by the derivation")
 	}
 }
-
-// TestMaskAttributionIsComplete pins the attribution established empirically, and pins
-// that the two registry-only effects own no mask bit.
 func TestMaskAttributionIsComplete(t *testing.T) {
 	if len(maskBitFor) != 15 {
 		t.Fatalf("attribution table has %d entries, want 15", len(maskBitFor))
@@ -471,7 +419,6 @@ func TestMaskAttributionIsComplete(t *testing.T) {
 			t.Errorf("%s owns no mask bit; it lives only in the registry", name)
 		}
 	}
-	// Every effect in the table must be a real effect.
 	for name := range maskBitFor {
 		if _, ok := findEffect(name); !ok {
 			t.Errorf("attribution table references unknown effect %q", name)

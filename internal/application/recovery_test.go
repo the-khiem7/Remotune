@@ -96,8 +96,6 @@ func TestRecoveryStoreLoadRejectsCorruptFile(t *testing.T) {
 func TestRecoveryStoreLoadRejectsWrongSchemaVersion(t *testing.T) {
 	s := newTestStore(t)
 	snap := validSnapshot()
-	// Bypass Save's validation to write a future-schema file directly, simulating an
-	// old Remotune reading a snapshot from a newer one (or vice versa).
 	snap.SchemaVersion = wintune.SnapshotSchemaVersion + 1
 	data, _ := json.Marshal(snap)
 	if err := os.WriteFile(filepath.Join(s.dir, recoveryFileName), data, 0o600); err != nil {
@@ -147,7 +145,6 @@ func TestRecoveryStoreSaveOverwritesAtomically(t *testing.T) {
 	if got.Machine != "second" {
 		t.Errorf("Machine = %q, want %q (overwrite must fully replace, no stale merge)", got.Machine, "second")
 	}
-	// No leftover temp files after a successful save.
 	entries, _ := os.ReadDir(s.dir)
 	for _, e := range entries {
 		if e.Name() != recoveryFileName {

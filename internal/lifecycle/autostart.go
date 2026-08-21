@@ -12,20 +12,15 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-// autostartKeyPath is the standard Run key for per-user startup programs.
 const autostartKeyPath = `SOFTWARE\Microsoft\Windows\CurrentVersion\Run`
 const autostartValueName = "Remotune"
 
-// AutostartStatus reports whether "Start with Windows" is currently registered and
-// whether the registered path matches the running executable.
 type AutostartStatus struct {
-	Registered bool
-	PathMatch  bool
-	// RegisteredPath is the path stored in the registry, if any.
+	Registered     bool
+	PathMatch      bool
 	RegisteredPath string
 }
 
-// GetAutostartStatus reads the current autostart state from the registry.
 func GetAutostartStatus() (AutostartStatus, error) {
 	k, err := registry.OpenKey(registry.CURRENT_USER, autostartKeyPath, registry.QUERY_VALUE)
 	if err != nil {
@@ -51,10 +46,6 @@ func GetAutostartStatus() (AutostartStatus, error) {
 		RegisteredPath: val,
 	}, nil
 }
-
-// SetAutostart enables or disables autostart using the current executable path.
-// If the executable has moved since the last registration, enabling will update the
-// path. Disabling always succeeds (even if not currently registered).
 func SetAutostart(enable bool) error {
 	if !enable {
 		return removeAutostart()
@@ -71,8 +62,6 @@ func SetAutostart(enable bool) error {
 		return fmt.Errorf("open Run key for write: %w", err)
 	}
 	defer k.Close()
-
-	// Quote the path for safety, even though paths without spaces technically don't need it.
 	quoted := `"` + exe + `"`
 	if err := k.SetStringValue(autostartValueName, quoted); err != nil {
 		return fmt.Errorf("write autostart value: %w", err)
@@ -93,9 +82,6 @@ func removeAutostart() error {
 	}
 	return nil
 }
-
-// equalsIgnoreCase compares two file paths case-insensitively (Windows is case-preserving
-// but case-insensitive for path comparisons).
 func equalsIgnoreCase(a, b string) bool {
 	if len(a) != len(b) {
 		return false
@@ -114,10 +100,6 @@ func equalsIgnoreCase(a, b string) bool {
 	}
 	return true
 }
-
-// normalizeAutostartPath removes the optional outer quotes required by a Windows
-// Run value before comparison. SetAutostart deliberately writes quoted paths so a
-// portable executable remains valid after being moved into a directory with spaces.
 func normalizeAutostartPath(path string) string {
 	path = strings.TrimSpace(path)
 	path = strings.Trim(path, `"`)

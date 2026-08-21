@@ -11,18 +11,12 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
-// buildTrayMenu creates the system tray context menu that is Remotune's primary
-// user surface until Phase 5 adds a Vue UI window.
 func buildTrayMenu(app *application.App, mainWindow *application.WebviewWindow, svc *lifecycle.Service) *application.Menu {
 	menu := app.NewMenu()
-
-	// Status line (read-only, updated dynamically).
 	statusItem := menu.Add("Remotune: Starting...")
 	statusItem.SetEnabled(false)
 
 	menu.AddSeparator()
-
-	// Pause / Resume toggle.
 	pauseItem := menu.Add("Pause Automation")
 	pauseItem.OnClick(func(ctx *application.Context) {
 		status := svc.Status()
@@ -37,8 +31,6 @@ func buildTrayMenu(app *application.App, mainWindow *application.WebviewWindow, 
 		}
 		refreshTrayMenu(statusItem, pauseItem, svc)
 	})
-
-	// Restore Now.
 	menu.Add("Restore Now").OnClick(func(ctx *application.Context) {
 		if err := svc.RestoreNow(); err != nil {
 			slog.Error("restore now failed", "error", err)
@@ -47,8 +39,6 @@ func buildTrayMenu(app *application.App, mainWindow *application.WebviewWindow, 
 	})
 
 	menu.AddSeparator()
-
-	// Start with Windows.
 	autostartItem := menu.Add("Start with Windows")
 	autostartStatus, _ := lifecycle.GetAutostartStatus()
 	autostartItem.SetChecked(autostartStatus.Registered && autostartStatus.PathMatch)
@@ -70,8 +60,6 @@ func buildTrayMenu(app *application.App, mainWindow *application.WebviewWindow, 
 	})
 
 	menu.AddSeparator()
-
-	// Quit.
 	menu.Add("Quit").OnClick(func(ctx *application.Context) {
 		if err := lifecycle.Shutdown(svc); err != nil {
 			statusItem.SetLabel("Quit blocked: restore failed")
@@ -80,17 +68,12 @@ func buildTrayMenu(app *application.App, mainWindow *application.WebviewWindow, 
 		}
 		app.Quit()
 	})
-
-	// Refresh after Wails has created its application context, without a spin loop.
 	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(event *application.ApplicationEvent) {
 		refreshTrayMenu(statusItem, pauseItem, svc)
 	})
 
 	return menu
 }
-
-// refreshTrayMenu updates the status line and pause/resume label to reflect
-// the current coordinator state.
 func refreshTrayMenu(statusItem *application.MenuItem, pauseItem *application.MenuItem, svc *lifecycle.Service) {
 	status := svc.Status()
 	line := fmt.Sprintf("CRD: %s | %s", status.CRD, status.Tuning)

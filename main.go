@@ -12,13 +12,8 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
-// version is set at build time via -ldflags "-X main.version=..."
 var version = "dev"
 
-// frontendAssets is the production Vue build. The host-native build pipeline creates
-// frontend/dist before compiling this package, so the shipped executable remains a
-// single portable file.
-//
 //go:embed all:frontend/dist
 var frontendAssets embed.FS
 
@@ -29,13 +24,9 @@ var appIcon []byte
 var trayIcon []byte
 
 func main() {
-	// Detect WebView2 before starting Wails — fail clearly if absent.
 	if err := lifecycle.CheckWebView2(); err != nil {
 		log.Fatalf("Remotune requires the WebView2 runtime: %v", err)
 	}
-
-	// The lifecycle service is the only backend surface exposed to Vue. It owns no
-	// Win32 logic itself; every state change continues through the coordinator.
 	svc := lifecycle.NewService()
 
 	app := application.New(application.Options{
@@ -53,9 +44,6 @@ func main() {
 			DisableQuitOnLastWindowClosed: true,
 		},
 	})
-
-	// The compact control surface stays hidden until the user opens Remotune from
-	// its tray icon. Closing it hides the window; the background service remains.
 	mainWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:          "main",
 		Title:         "Remotune",
@@ -71,21 +59,15 @@ func main() {
 		event.Cancel()
 		mainWindow.Hide()
 	})
-
-	// System tray — the primary user surface.
 	tray := app.SystemTray.New()
 	tray.SetIcon(trayIcon)
 	menu := buildTrayMenu(app, mainWindow, svc)
 	tray.SetMenu(menu)
 	tray.SetTooltip("Remotune v" + version)
-
-	// Left-click opens the compact control surface.
 	tray.OnClick(func() {
 		mainWindow.Show()
 		mainWindow.Focus()
 	})
-
-	// Run blocks until the application exits.
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}

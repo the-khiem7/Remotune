@@ -11,45 +11,22 @@ import (
 )
 
 const (
-	stuckRectsKey  = `Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3`
-	stuckRectsName = "Settings"
-	// stuckRectsAutoHideByte is the offset of the flags byte inside the Settings blob.
+	stuckRectsKey          = `Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3`
+	stuckRectsName         = "Settings"
 	stuckRectsAutoHideByte = 8
-	// stuckRectsAutoHideBit is the auto-hide flag within that byte.
-	stuckRectsAutoHideBit = 0x01
+	stuckRectsAutoHideBit  = 0x01
 )
 
-// settleDelay is how long the shell needs before a taskbar change is observable.
-// Measured at roughly 1.2 s during Phase 0; kept slightly higher for headroom.
 var settleDelay = 1500 * time.Millisecond
 
-// TaskbarManager reads and writes taskbar auto-hide.
-//
-// It writes BOTH layers on every change:
-//
-//	ABM_SETSTATE   immediate live effect
-//	StuckRects3    what Explorer persists and can reconcile back from
-//
-// Writing only the API layer is not durable. The live state and the persisted value
-// were observed to diverge, and an override applied only through the API later
-// reverted on its own. Writing both removes the divergence window.
 type TaskbarManager struct{}
-
-// TaskbarState is the observed auto-hide state across both layers.
 type TaskbarState struct {
-	// ABMState is the raw appbar state word, retained so unrelated bits can be preserved.
-	ABMState uint32
-	// Live is auto-hide as the shell currently behaves.
-	Live bool
-	// Persisted is auto-hide as Explorer has it stored.
+	ABMState  uint32
+	Live      bool
 	Persisted bool
 }
 
-// Agreed reports whether the two layers match. Disagreement is a health signal: it
-// means the override can be silently reverted at any time.
 func (s TaskbarState) Agreed() bool { return s.Live == s.Persisted }
-
-// GetState reads both layers.
 func (m *TaskbarManager) GetState() (TaskbarState, error) {
 	abm := appBarGetState()
 	persisted, err := readPersistedAutoHide()
@@ -62,8 +39,6 @@ func (m *TaskbarManager) GetState() (TaskbarState, error) {
 		Persisted: persisted,
 	}, nil
 }
-
-// GetAutoHide returns the live auto-hide value.
 func (m *TaskbarManager) GetAutoHide() (bool, error) {
 	s, err := m.GetState()
 	if err != nil {
@@ -71,24 +46,17 @@ func (m *TaskbarManager) GetAutoHide() (bool, error) {
 	}
 	return s.Live, nil
 }
-
-// Snapshot captures the current auto-hide state for later exact restoration.
 func (m *TaskbarManager) Snapshot() (*TaskbarSnapshot, error) {
 	s, err := m.GetState()
 	if err != nil {
 		return nil, err
 	}
-	// The live value is what the user experiences, so it is the baseline to restore.
 	return &TaskbarSnapshot{
 		AutoHide:            s.Live,
 		ABMState:            s.ABMState,
 		LivePersistedAgreed: s.Agreed(),
 	}, nil
 }
-
-// SetAutoHide writes the desired auto-hide value to both layers, changing only the
-// ABS_AUTOHIDE bit and only bit 0 of the persisted flags byte, then verifies the
-// observable outcome.
 func (m *TaskbarManager) SetAutoHide(on bool) (CategoryResult, error) {
 	res := CategoryResult{Category: CategoryTaskbar}
 
@@ -99,23 +67,16 @@ func (m *TaskbarManager) SetAutoHide(on bool) (CategoryResult, error) {
 	}
 
 	if before.Live == on && before.Persisted == on {
-		// Already correct on both layers. Idempotent no-op, still reported as verified.
 		res.Verified = true
 		return res, nil
 	}
-
-	// live layer: flip only ABS_AUTOHIDE, carry every other bit through
 	target := before.ABMState
 	if on {
 		target |= ABSAutoHide
 	} else {
 		target &^= ABSAutoHide
 	}
-	// ABM_SETSTATE returns FALSE on some builds even when it works, so the error is
-	// recorded but the observable outcome decides success.
 	setErr := appBarSetState(target)
-
-	// persisted layer: flip only bit 0 of the flags byte
 	if err := writePersistedAutoHide(on); err != nil {
 		res.Err = fmt.Errorf("persist auto-hide: %w", err)
 		return res, res.Err
@@ -138,9 +99,6 @@ func (m *TaskbarManager) SetAutoHide(on bool) (CategoryResult, error) {
 		res.Err = fmt.Errorf("persisted auto-hide is %v, want %v", after.Persisted, on)
 		return res, res.Err
 	}
-
-	// Independent confirmation from an observable side effect rather than a re-read of
-	// the same value we just wrote.
 	if ok, err := verifyAutoHideByWorkArea(on); err == nil && !ok {
 		res.Err = fmt.Errorf("work area does not reflect auto-hide=%v", on)
 		return res, res.Err
@@ -149,8 +107,6 @@ func (m *TaskbarManager) SetAutoHide(on bool) (CategoryResult, error) {
 	res.Verified = true
 	return res, nil
 }
-
-// Restore returns auto-hide to a captured baseline. A nil snapshot is not guessed at.
 func (m *TaskbarManager) Restore(s *TaskbarSnapshot) (CategoryResult, error) {
 	if s == nil {
 		err := errors.New("no taskbar snapshot to restore")
@@ -183,9 +139,6 @@ func readStuckRects() ([]byte, error) {
 	}
 	return b, nil
 }
-
-// writePersistedAutoHide flips only the auto-hide bit inside the current blob, so
-// unrelated taskbar settings such as edge or size are never reverted.
 func writePersistedAutoHide(on bool) error {
 	b, err := readStuckRects()
 	if err != nil {
@@ -204,11 +157,6 @@ func writePersistedAutoHide(on bool) error {
 	defer k.Close()
 	return k.SetBinaryValue(stuckRectsName, b)
 }
-
-// verifyAutoHideByWorkArea confirms auto-hide from an observable side effect: an
-// auto-hiding taskbar reserves no work area, so the work area fills the screen.
-//
-// Reported as (ok, err). A nil error with ok=false is a genuine mismatch.
 func verifyAutoHideByWorkArea(expectAutoHide bool) (bool, error) {
 	wa, err := primaryWorkArea()
 	if err != nil {
