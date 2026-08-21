@@ -60,8 +60,7 @@ func buildTrayMenu(app *application.App, mainWindow *application.WebviewWindow, 
 	menu.AddSeparator()
 
 	menu.Add("Open").OnClick(func(ctx *application.Context) {
-		mainWindow.Show()
-		mainWindow.Focus()
+		showAtWorkAreaBottomRight(app, mainWindow)
 	})
 
 	menu.AddSeparator()

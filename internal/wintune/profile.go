@@ -7,6 +7,60 @@ import (
 	"strconv"
 )
 
+func CustomEffectsFromSnapshot(snapshot *VisualEffectsSnapshot) map[string]bool {
+	effects := map[string]bool{}
+	if snapshot == nil {
+		return effects
+	}
+	for _, name := range EffectNames() {
+		effects[name] = customEffectEnabled(snapshot, name)
+	}
+	return effects
+}
+
+func customEffectEnabled(snapshot *VisualEffectsSnapshot, name string) bool {
+	spi := snapshot.SPI
+	reg := func(name string) uint32 { return snapshot.Registry[name].DWord }
+	switch name {
+	case "AnimateControls":
+		return spi["UIEffects"] != 0
+	case "AnimateWindows":
+		return spi[minAnimateKey] != 0
+	case "TaskbarAnimations":
+		return reg("Advanced.TaskbarAnimations") != 0
+	case "EnablePeek":
+		return reg("DWM.EnableAeroPeek") != 0
+	case "MenuAnimation":
+		return spi["MenuAnimation"] != 0
+	case "TooltipAnimation":
+		return spi["TooltipAnimation"] != 0
+	case "SelectionFade":
+		return spi["SelectionFade"] != 0
+	case "SaveTaskbarThumbnails":
+		return reg("DWM.AlwaysHibernateThumbnails") != 0
+	case "CursorShadow":
+		return spi["CursorShadow"] != 0
+	case "DropShadow":
+		return spi["DropShadow"] != 0
+	case "ShowThumbnails":
+		return reg("Advanced.IconsOnly") == 0
+	case "TranslucentSelection":
+		return reg("Advanced.ListviewAlphaSelect") != 0
+	case "DragFullWindows":
+		return spi["DragFullWindows"] != 0
+	case "ComboBoxAnimation":
+		return spi["ComboBoxAnimation"] != 0
+	case "FontSmoothing":
+		return spi["FontSmoothing"] != 0
+	case "ListBoxSmoothScrolling":
+		return spi["ListBoxSmoothScrolling"] != 0
+	case "IconLabelShadow":
+		return reg("Advanced.ListviewShadow") != 0
+	default:
+		return false
+	}
+}
+
 type VisualEffectsProfile string
 
 const (

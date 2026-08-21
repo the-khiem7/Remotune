@@ -109,7 +109,7 @@ The surface may display:
 - Start with Windows;
 - Restore Now and Settings/diagnostics.
 
-**[IMPLEMENTED]** Settings display the Visual Effects radios and 17 checkboxes from the Windows Performance Options Visual Effects tab. Selecting Custom keeps its editor open. Editing a checkbox selects Remotune Custom; returning through checkbox edits to an exact built-in combination selects that profile. The UI does not include Performance Options Advanced/Data Execution Prevention settings, Minimal/Recommended/Aggressive profiles, or a dashboard.
+**[IMPLEMENTED]** Settings display the Visual Effects radios. Selecting Custom opens the native Windows Performance Options dialog, whose Visual Effects UI and behavior are owned by Windows; after applying a change there, select `Use current Windows settings` to store the observed state as Remotune Custom. The UI does not include Advanced/Data Execution Prevention settings, Minimal/Recommended/Aggressive profiles, or a dashboard.
 
 ## Tray behavior
 

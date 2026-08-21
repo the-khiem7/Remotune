@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os/exec"
 	"sync"
 
 	"github.com/khiemnguyen/remotune/internal/application"
@@ -226,4 +227,20 @@ func (s *Service) SetProfileSettings(settings application.ProfileSettings) (appl
 }
 func (s *Service) VisualEffectNames() []string {
 	return wintune.EffectNames()
+}
+func (s *Service) OpenWindowsPerformanceOptions() error {
+	return exec.Command("SystemPropertiesPerformance.exe").Start()
+}
+func (s *Service) AdoptCurrentWindowsVisualEffects() (application.ProfileSettings, error) {
+	settings, err := s.GetProfileSettings()
+	if err != nil {
+		return application.ProfileSettings{}, err
+	}
+	current, err := (&wintune.VisualEffectsManager{}).Snapshot()
+	if err != nil {
+		return application.ProfileSettings{}, err
+	}
+	settings.CRDOnProfile = wintune.ProfileCustom
+	settings.CustomEffects = wintune.CustomEffectsFromSnapshot(current)
+	return s.SetProfileSettings(settings)
 }

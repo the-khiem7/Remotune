@@ -609,7 +609,7 @@ Selecting the CRD-on `Custom` radio keeps Custom visible so its values can be ed
 - **[IMPLEMENTED]** Persisted `CRDOnProfile` and `CRDOffAction` settings, with a schema-versioned Remotune Custom selection.
 - **[IMPLEMENTED]** A profile compiler that produces a complete three-layer target state and reuses the bounded convergence/verification path.
 - **[IMPLEMENTED]** Built-in targets for Let Windows choose, Best Appearance, and Best Performance. Let Windows choose is accurately implemented as the Windows label plus the current effect values because writing label `0` does not recompute effects.
-- **[IMPLEMENTED]** A compact Wails settings surface with four CRD-on radios, four CRD-off choices, and the bounded 17-item Custom list.
+- **[IMPLEMENTED]** A compact Wails settings surface with four CRD-on radios and four CRD-off choices. Custom opens the native Windows Performance Options dialog; the user explicitly adopts the observed current Windows state into Remotune Custom after applying it there.
 - **[IMPLEMENTED]** Coordinator lifecycle changes: capture the original snapshot before the first connected override; restore it only for the snapshot off-action; retire it only after a selected off profile has converged and verified.
 - Diagnostics that distinguish configured profile, observed Visual Effects state, owned snapshot, and the most recent apply/restore outcome.
 

@@ -29,7 +29,7 @@ All items in this section are **[DECIDED]**.
 6. `Best Performance`, `Best Appearance`, and `Let Windows choose` are Windows Performance Options targets. `Custom` is a Remotune-persisted selection of the 17 Visual Effects checkboxes and is available only for CRD-on automation. **[IMPLEMENTED]** The profile compiler and Wails surface exist; target-machine observation remains **[UNVERIFIED]**.
 7. Exact snapshot/restore and durable crash recovery are mandatory.
 8. Windows remains the source of truth for applied Visual Effects state. Remotune owns the bounded profile configuration and automation lifecycle.
-9. Remotune exposes only the Performance Options Visual Effects radios and 17 checkboxes required for CRD automation. It does not expose Advanced/Data Execution Prevention settings, generic Windows tuning, or Minimal/Recommended/Aggressive profiles.
+9. Remotune exposes only the Performance Options Visual Effects radios required for CRD automation. Custom delegates editing to the native Windows Performance Options dialog and requires explicit adoption of the observed state. It does not expose Advanced/Data Execution Prevention settings, generic Windows tuning, or Minimal/Recommended/Aggressive profiles.
 10. The product is a compact, G-Helper-inspired tray utility, not a G-Helper clone, dashboard, generic optimizer, or tweak suite.
 11. CRD Windows Event Log events are the chosen primary detector direction. Host process presence and network/system heuristics are not connection truth.
 12. Startup must reconstruct current CRD state before relying on future subscriptions.

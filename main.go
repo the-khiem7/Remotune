@@ -65,11 +65,24 @@ func main() {
 	tray.SetMenu(menu)
 	tray.SetTooltip("Remotune v" + version)
 	tray.OnClick(func() {
-		mainWindow.Show()
-		mainWindow.Focus()
+		showAtWorkAreaBottomRight(app, mainWindow)
 	})
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}
 
+}
+
+func showAtWorkAreaBottomRight(app *application.App, window *application.WebviewWindow) {
+	screen := app.Screen.GetPrimary()
+	if screen != nil {
+		width, height := window.Size()
+		if width == 0 || height == 0 {
+			width, height = 420, 560
+		}
+		const margin = 12
+		window.SetPosition(screen.WorkArea.X+screen.WorkArea.Width-width-margin, screen.WorkArea.Y+screen.WorkArea.Height-height-margin)
+	}
+	window.Show()
+	window.Focus()
 }
