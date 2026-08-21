@@ -9,7 +9,7 @@ code_ref: "uncommitted"
 
 # Remotune Baseline Introduction
 
-**[VERIFIED]** In the target-machine v0.1.5 run, the operator confirmed animation was applied while the UI reported an active CRD session and available recovery snapshot. **[IMPLEMENTED]** `out/remotune-v0.1.6.exe` packages the Start with Windows quoted-path comparison correction. **[UNVERIFIED]** v0.1.6 still needs a target-machine run, startup-after-sign-in observation, and full Pause/Resume/Quit recovery acceptance.
+**[VERIFIED]** In the target-machine v0.1.5 run, the operator confirmed animation was applied while the UI reported an active CRD session and available recovery snapshot. **[IMPLEMENTED]** `out/remotune-v0.1.8.exe` packages the Phase 6 Custom editor and batched Apply revision. Its host-native build, Bun frozen-lockfile frontend build, formatting, `go vet`, and short Go tests passed on 2026-08-21. **[UNVERIFIED]** v0.1.8 still needs a target-machine run, Custom editor acceptance, startup-after-sign-in observation, and full recovery acceptance.
 
 **[IMPLEMENTED]** The development workflow is now host-native: `%USERPROFILE%\go\bin\wails3.exe` is installed at the pinned `v3.0.0-beta.8`; `wails3 dev` invokes the `build/config.yml` dev graph with Vite hot reload, and `wails3 task` runs the repository Taskfile for verification and portable Windows packaging. `build/config.yml` is the sole semantic-version source for both Wails metadata and versioned portable artifacts. Docker is no longer a supported development boundary.
 

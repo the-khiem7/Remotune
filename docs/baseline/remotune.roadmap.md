@@ -617,6 +617,7 @@ Selecting the CRD-on `Custom` radio keeps Custom visible so its values can be ed
 ### Acceptance gate
 
 - **[VERIFIED]** `wails3 task verify` regenerated bindings, completed Bun frozen-lockfile production build, resource generation, `go vet`, and the short Go suite after the Phase 6 implementation.
+- **[IMPLEMENTED]** `out/remotune-v0.1.8.exe` was built successfully from the sole `build/config.yml` semantic version on 2026-08-21 (12,096,000 bytes). This is local packaging evidence, not target-machine acceptance.
 - **[IMPLEMENTED]** Unit coverage exercises profile-store normalization, the profile compiler's label/mask behavior, and selected CRD-off profile retirement. Target-machine observation remains pending.
 - Custom editing selects Custom; an exact built-in match selects its corresponding radio.
 - **[IMPLEMENTED]** The Custom editor opens as a separate Remotune window beside the main popup, keeps the main popup open, stays within the Windows work area, and never opens the native Windows Performance Options dialog. It must accept arbitrary checkbox changes without waiting for Windows, then apply all selected effects through one Apply action. **[UNVERIFIED]** Live target-machine placement, reopening after close, draft/revert behavior, and one-shot Apply behavior still need manual acceptance.

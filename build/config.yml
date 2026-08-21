@@ -7,7 +7,7 @@ info:
   description: "Automatically tunes Windows for remote desktop sessions"
   copyright: ""
   comments: ""
-  version: "0.1.7"
+  version: "0.1.8"
 
 dev_mode:
   root_path: .
