@@ -589,11 +589,11 @@ Gate coverage, by baseline requirement:
 ### Acceptance gate
 
 - Vue renders verified backend state and never assumes a click changed Windows.
-- The current UI has no profile configuration surface. The approved Phase 6 scope adds only the Visual Effects choices and checkbox list, not a dashboard or the Advanced/Data Execution Prevention tabs.
+- The current UI has no profile configuration surface. The approved Phase 6 scope adds only the Visual Effects choices and Custom editor, not a dashboard or the Advanced/Data Execution Prevention tabs.
 
 ## Phase 6 — Visual Effects profiles
 
-**Status:** **[IMPLEMENTED]** and locally verified by the Wails host-native gate on 2026-08-21. Target-machine observation of each profile remains **[UNVERIFIED]**. This phase expands the remote-session automation contract; it does not alter the detector, taskbar auto-hide ownership, or recovery invariant.
+**Status:** **[IMPLEMENTED]** and locally verified by the Wails host-native gate on 2026-08-21. Target-machine observation of each profile and live multi-window behavior remain **[UNVERIFIED]**. This phase expands the remote-session automation contract; it does not alter the detector, taskbar auto-hide ownership, or recovery invariant.
 
 ### Product contract
 
@@ -609,7 +609,8 @@ Selecting the CRD-on `Custom` radio keeps Custom visible so its values can be ed
 - **[IMPLEMENTED]** Persisted `CRDOnProfile` and `CRDOffAction` settings, with a schema-versioned Remotune Custom selection.
 - **[IMPLEMENTED]** A profile compiler that produces a complete three-layer target state and reuses the bounded convergence/verification path.
 - **[IMPLEMENTED]** Built-in targets for Let Windows choose, Best Appearance, and Best Performance. Let Windows choose is accurately implemented as the Windows label plus the current effect values because writing label `0` does not recompute effects.
-- **[IMPLEMENTED]** A compact Wails settings surface with four CRD-on radios and four CRD-off choices. Custom opens the native Windows Performance Options dialog; the user explicitly adopts the observed current Windows state into Remotune Custom after applying it there.
+- **[IMPLEMENTED]** A compact Wails settings surface with four CRD-on radios and four CRD-off choices.
+- **[IMPLEMENTED]** Selecting `CRD ON → Custom` opens a separate Remotune Wails editor window beside the main popup, preferentially on its left. It contains the persisted Remotune Custom Visual Effects checklist with Windows Performance Options-like interaction. It neither navigates away from the main popup nor launches the Windows Performance Options dialog. The old native launcher/adoption path is removed.
 - **[IMPLEMENTED]** Coordinator lifecycle changes: capture the original snapshot before the first connected override; restore it only for the snapshot off-action; retire it only after a selected off profile has converged and verified.
 - Diagnostics that distinguish configured profile, observed Visual Effects state, owned snapshot, and the most recent apply/restore outcome.
 
@@ -618,6 +619,7 @@ Selecting the CRD-on `Custom` radio keeps Custom visible so its values can be ed
 - **[VERIFIED]** `wails3 task verify` regenerated bindings, completed Bun frozen-lockfile production build, resource generation, `go vet`, and the short Go suite after the Phase 6 implementation.
 - **[IMPLEMENTED]** Unit coverage exercises profile-store normalization, the profile compiler's label/mask behavior, and selected CRD-off profile retirement. Target-machine observation remains pending.
 - Custom editing selects Custom; an exact built-in match selects its corresponding radio.
+- **[IMPLEMENTED]** The Custom editor opens as a separate Remotune window beside the main popup, keeps the main popup open, stays within the Windows work area, and never opens the native Windows Performance Options dialog. **[UNVERIFIED]** Live target-machine placement, reopening after close, and editing behavior still need manual acceptance.
 - CRD OFF with Snapshot restores every affected value exactly, including the opaque mask and font smoothing type.
 - CRD OFF with a built-in profile applies that profile, verifies it, and retires ownership so later Quit does not undo the chosen disconnected state.
 - Pause and Explicit Quit restore a still-owned snapshot; failed applies/restores retain recovery data and surface the residual error.
@@ -753,7 +755,7 @@ Selecting the CRD-on `Custom` radio keeps Custom visible so its values can be ed
 
 ## Exact next action
 
-Phase 5 implementation and Windows icon packaging are complete; its v0.1.7 sign-out/sign-in autostart proof is explicitly **[DEFERRED]** to Phase 7/release acceptance. Phase 6 is implemented and passed the host-native Wails verification gate; target-machine profile observation remains open. The currently verified Phase 5 evidence is the quoted `HKCU\...\Run` entry, whose normalized path exists and matches the running executable, plus user-observed expected Pause/Resume and Explicit Quit restoration. `build/config.yml` remains the sole semantic-version source for Wails metadata and `out/remotune-v<version>.exe`; the redundant secondary version source is retired. The next implementation phase is Phase 7: deferred login-autostart proof, crash recovery, Explorer restart, Windows 10, multi-monitor/secondary taskbars, Event Log fault handling, portable-path movement, unavailable WebView2, and resource use.
+Phase 5 implementation and Windows icon packaging are complete; its v0.1.7 sign-out/sign-in autostart proof is explicitly **[DEFERRED]** to Phase 7/release acceptance. Phase 6 profile application and its Custom editor revision passed the host-native Wails verification gate. Before Phase 7 begins, manually verify on the target machine that selecting `CRD ON → Custom` opens the Remotune editor to the left of the main popup, stays inside the work area, hides and reopens cleanly, and persists edited effects. The currently verified Phase 5 evidence is the quoted `HKCU\...\Run` entry, whose normalized path exists and matches the running executable, plus user-observed expected Pause/Resume and Explicit Quit restoration. `build/config.yml` remains the sole semantic-version source for Wails metadata and `out/remotune-v<version>.exe`; the redundant secondary version source is retired.
 
 ## Runtime incident checkpoint (2026-08-20)
 

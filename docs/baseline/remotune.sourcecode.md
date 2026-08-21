@@ -15,21 +15,21 @@ code_ref: "uncommitted"
 
 ## Implementation status
 
-**[IMPLEMENTED]** Phases 1 through 5. The root Go module `github.com/khiemnguyen/remotune` contains the Wails v3 tray shell, migrated Phase 1–3 adapters, coordinator, lifecycle package, and compact Vue/Vite control surface. The standalone `engine/` module is superseded but retained for reference.
+**[IMPLEMENTED]** Phases 1 through 6. The root Go module `github.com/khiemnguyen/remotune` contains the Wails v3 tray shell, migrated Phase 1–3 adapters, coordinator, lifecycle package, compact Vue/Vite control surface, and Visual Effects profile/editor revision. The standalone `engine/` module is superseded but retained for reference.
 
 ## Repository contribution convention
 
 **[DECIDED]** Code files contain code only: do not add explanatory comments, architecture rationale, operational guidance, or implementation narrative to them. The active baseline documentation is the durable location for that material. This applies to future changes; historical comments are not evidence of current product behavior.
 
-**[UNVERIFIED]** Phase 6 Visual Effects profiles and Phase 7 hardening remain. The versioned v0.1.4 binary has build/test evidence and its corrected Vue window, including Close-to-tray, was manually observed on the target machine on 2026-08-20. Restore Now, Start with Windows, Pause, and Resume were exercised in v0.1.3, but the end-to-end safety workflow is open: v0.1.4 reported a disconnected CRD state during an active connection, and the operator reported a prior Explicit Quit that did not restore animation.
+**[UNVERIFIED]** Phase 7 hardening remains. Phase 6 profile application and its Custom editor passed host-native verification, but target-machine profile and multi-window observation remain pending. The versioned v0.1.4 binary has build/test evidence and its corrected Vue window, including Close-to-tray, was manually observed on the target machine on 2026-08-20. Restore Now, Start with Windows, Pause, and Resume were exercised in v0.1.3, but the end-to-end safety workflow is open: v0.1.4 reported a disconnected CRD state during an active connection, and the operator reported a prior Explicit Quit that did not restore animation.
 
 **[VERIFIED]** items rest on the live observations recorded in [Phase 0 recorded evidence](remotune.roadmap.md#phase-0-recorded-evidence), collected on Windows 11 Pro 23H2 with CRD host 152.0.7977.9 as a non-elevated user. `tools/phase0/Get-VisualState.ps1` is the working reference for the snapshot shape described under [Persistence](#persistence).
 
 ## Current presentation and packaging flow
 
-`main.go` embeds `frontend/dist`, `assets/app/remotune-256.png`, and `assets/tray/remotune-32.png`. It supplies the app icon to Wails, sets the system-tray icon, creates the initially hidden control window, and binds `internal/lifecycle.Service` as the only Vue-facing backend surface.
+`main.go` embeds `frontend/dist`, `assets/app/remotune-256.png`, and `assets/tray/remotune-32.png`. It supplies the app icon to Wails, sets the system-tray icon, creates initially hidden main and Custom Visual Effects windows, and binds `internal/lifecycle.Service` as the only Vue-facing backend surface. The main window injects an editor-opening callback into the service constructor; the service exposes only `OpenCustomEffectsEditor` to Vue and has no dependency on a Windows system-settings launcher.
 
-`frontend/src/App.vue` translates numeric `crd.State` and `application.TuningState` values to display labels at its boundary. It must not call string operations on raw transport values. `frontend/src/wails.ts` remains the sole import point for generated bindings.
+`frontend/src/App.vue` translates numeric `crd.State` and `application.TuningState` values to display labels at its boundary. It chooses the main or Custom editor presentation from the Wails window query and persists every Custom checklist edit through `SetProfileSettings`. It must not call string operations on raw transport values. `frontend/src/wails.ts` remains the sole import point for generated bindings.
 
 The Go module, `wails3.exe`, and `@wailsio/runtime` are all fixed at `v3.0.0-beta.8`; `bun.lock` makes `bun install --frozen-lockfile` reproducible. A caret range is not acceptable for this Beta framework because it can silently place a different runtime beside the pinned Go transport.
 

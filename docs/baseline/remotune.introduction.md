@@ -172,6 +172,8 @@ System Properties
 
 The same Windows surface contains “Let Windows choose what's best for my computer,” “Adjust for best appearance,” “Custom,” and the 17-item Visual Effects checklist. Remotune adopts those three Windows profiles as explicit targets. Its `Custom` profile is the persisted set of checkbox choices made in Remotune; editing any checkbox selects `Custom`, while a full match with a built-in target normalizes back to that target.
 
+**[IMPLEMENTED]** Choosing `CRD ON → Custom` opens a separate Remotune-owned Wails editor window without replacing or closing the main popup. The editor is positioned immediately to the left of the main popup when the work area permits, otherwise within the usable work area. Its checklist interaction follows the familiar Windows Performance Options Visual Effects model, but it is not the Windows system dialog and does not expose the Advanced or Data Execution Prevention tabs. The Wails host-native verification gate passed on 2026-08-21; live multi-window placement and interaction remain **[UNVERIFIED]**.
+
 A user may begin in Best Appearance, Best Performance, Let Windows choose, or an arbitrary Custom combination. `Revert to snapshot` restores that exact affected state; selecting a CRD-off profile is an intentional replacement of it, not a recovery operation.
 
 ## Required behavior

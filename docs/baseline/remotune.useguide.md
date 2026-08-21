@@ -109,7 +109,7 @@ The surface may display:
 - Start with Windows;
 - Restore Now and Settings/diagnostics.
 
-**[IMPLEMENTED]** Settings display the Visual Effects radios. Selecting Custom opens the native Windows Performance Options dialog, whose Visual Effects UI and behavior are owned by Windows; after applying a change there, select `Use current Windows settings` to store the observed state as Remotune Custom. The UI does not include Advanced/Data Execution Prevention settings, Minimal/Recommended/Aggressive profiles, or a dashboard.
+**[IMPLEMENTED]** Settings display the Visual Effects radios. Selecting `CRD ON → Custom` opens a separate Remotune-owned editor window beside the main popup, preferentially on its left, while the main popup remains open. The editor provides the persisted Remotune Custom Visual Effects checklist with familiar Performance Options-like behavior; it does not open the native Windows Performance Options dialog. It does not include Advanced/Data Execution Prevention settings, Minimal/Recommended/Aggressive profiles, or a dashboard. Host-native verification passed on 2026-08-21; live target-machine interaction remains **[UNVERIFIED]**.
 
 ## Tray behavior
 

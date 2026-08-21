@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { AdoptCurrentWindowsVisualEffects, GetAutostartStatus, GetProfileSettings, OpenWindowsPerformanceOptions, Pause, PortablePathStatus, RestoreNow, Resume, SetAutostart, SetProfileSettings, Status } from './wails'
+import { GetAutostartStatus, GetProfileSettings, OpenCustomEffectsEditor, Pause, PortablePathStatus, RestoreNow, Resume, SetAutostart, SetProfileSettings, Status } from './wails'
 
 type CoordinatorStatus = {
   Tuning: number
@@ -42,6 +42,26 @@ type ProfileSettings = {
 
 const crdLabels = ['Unknown', 'Disconnected', 'Connected']
 const tuningLabels = ['Unknown', 'Baseline', 'Applying', 'Active', 'Restoring', 'Partial/Error', 'Recovery Required']
+const customEditor = new URLSearchParams(window.location.search).get('view') === 'custom'
+const visualEffects = [
+  { key: 'AnimateControls', label: 'Animate controls and elements inside windows' },
+  { key: 'AnimateWindows', label: 'Animate windows when minimizing and maximizing' },
+  { key: 'TaskbarAnimations', label: 'Animations in the taskbar' },
+  { key: 'EnablePeek', label: 'Enable Peek' },
+  { key: 'MenuAnimation', label: 'Fade or slide menus into view' },
+  { key: 'TooltipAnimation', label: 'Fade or slide ToolTips into view' },
+  { key: 'SelectionFade', label: 'Fade out menu items after clicking' },
+  { key: 'SaveTaskbarThumbnails', label: 'Save taskbar thumbnail previews' },
+  { key: 'CursorShadow', label: 'Show shadows under mouse pointer' },
+  { key: 'DropShadow', label: 'Show shadows under windows' },
+  { key: 'ShowThumbnails', label: 'Show thumbnails instead of icons' },
+  { key: 'TranslucentSelection', label: 'Show translucent selection rectangle' },
+  { key: 'DragFullWindows', label: 'Show window contents while dragging' },
+  { key: 'ComboBoxAnimation', label: 'Slide open combo boxes' },
+  { key: 'FontSmoothing', label: 'Smooth edges of screen fonts' },
+  { key: 'ListBoxSmoothScrolling', label: 'Smooth-scroll list boxes' },
+  { key: 'IconLabelShadow', label: 'Use drop shadows for icon labels on the desktop' },
+]
 
 const status = ref<CoordinatorStatus | null>(null)
 const autostart = ref<AutostartStatus | null>(null)
@@ -125,15 +145,25 @@ function updateProfiles(update: Partial<ProfileSettings>, successNotice: string)
 }
 
 function selectOnProfile(profile: string) {
-  return updateProfiles({ crdOnProfile: profile }, 'CRD-on Visual Effects profile updated.')
+  if (profile !== 'custom') return updateProfiles({ crdOnProfile: profile }, 'CRD-on Visual Effects profile updated.')
+  return run(async () => {
+    if (!profiles.value) return
+    profiles.value = await SetProfileSettings({ ...profiles.value, crdOnProfile: 'custom' } as Parameters<typeof SetProfileSettings>[0]) as ProfileSettings
+    await OpenCustomEffectsEditor()
+  }, 'Custom Visual Effects editor opened.')
 }
 
 function selectOffAction(action: string) {
   return updateProfiles({ crdOffAction: action }, 'CRD-off action updated.')
 }
 
-function openWindowsPerformanceOptions() { return run(() => OpenWindowsPerformanceOptions(), 'Windows Performance Options opened. Apply your changes there, then use the current settings here.') }
-function adoptCurrentWindowsSettings() { return run(async () => { profiles.value = await AdoptCurrentWindowsVisualEffects() as ProfileSettings }, 'Current Windows Visual Effects saved as Remotune Custom.') }
+function updateCustomEffect(effect: string, enabled: boolean) {
+  return updateProfiles({ crdOnProfile: 'custom', customEffects: { [effect]: enabled } }, 'Custom Visual Effects updated.')
+}
+
+function openCustomEditor() {
+  return run(() => OpenCustomEffectsEditor(), 'Custom Visual Effects editor opened.')
+}
 
 onMounted(async () => {
   await refresh()
@@ -146,7 +176,15 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="panel" aria-live="polite">
+  <main v-if="customEditor" class="custom-editor" aria-live="polite">
+    <header class="editor-header"><div><p class="eyebrow">CRD ON</p><h1>Custom Visual Effects</h1><p>Choose the effects Remotune applies while Chrome Remote Desktop is connected.</p></div></header>
+    <fieldset class="effect-list" :disabled="busy || !profiles"><legend>Visual Effects</legend>
+      <label v-for="effect in visualEffects" :key="effect.key" class="effect-choice"><input type="checkbox" :checked="profiles?.customEffects[effect.key]" @change="updateCustomEffect(effect.key, ($event.target as HTMLInputElement).checked)"><span>{{ effect.label }}</span></label>
+    </fieldset>
+    <p v-if="error" class="error" role="alert">{{ error }}</p>
+    <p v-if="notice" class="notice" role="status">{{ notice }}</p>
+  </main>
+  <main v-else class="panel" aria-live="polite">
     <header class="header">
       <h1>Remotune</h1>
       <button class="switch" :aria-label="automationLabel" :aria-pressed="!status?.Paused" :disabled="busy" @click="toggleAutomation"><span></span></button>
@@ -178,8 +216,8 @@ onUnmounted(() => {
         <label v-for="option in [{ value: 'restoreSnapshot', label: 'Revert to snapshot' }, { value: 'windowsChoose', label: 'Let Windows choose' }, { value: 'bestAppearance', label: 'Best Appearance' }, { value: 'bestPerformance', label: 'Best Performance' }]" :key="option.value" class="choice"><input type="radio" name="crd-off" :checked="profiles?.crdOffAction === option.value" @change="selectOffAction(option.value)"><span>{{ option.label }}</span></label>
       </fieldset>
       <div v-if="profiles?.crdOnProfile === 'custom'" class="native-effects">
-        <p>Use the Windows editor for the exact Visual Effects UI and behavior.</p>
-        <div class="native-actions"><button class="secondary" :disabled="busy" @click="openWindowsPerformanceOptions">Open Windows Performance Options</button><button class="text-button" :disabled="busy" @click="adoptCurrentWindowsSettings">Use current Windows settings</button></div>
+        <p>Custom effects are edited in the separate Remotune window beside this popup.</p>
+        <div class="native-actions"><button class="secondary" :disabled="busy" @click="openCustomEditor">Open Custom editor</button></div>
       </div>
     </section>
 

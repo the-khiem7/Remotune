@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os/exec"
 	"sync"
 
 	"github.com/khiemnguyen/remotune/internal/application"
@@ -16,20 +15,22 @@ import (
 )
 
 type Service struct {
-	mu           sync.Mutex
-	coordinator  *application.Coordinator
-	store        *application.RecoveryStore
-	profiles     *application.ProfileStore
-	running      bool
-	shuttingDown bool
-	cancel       context.CancelFunc
-	done         chan struct{}
-	diagnostics  *application.DetectorDiagnostics
+	mu                      sync.Mutex
+	coordinator             *application.Coordinator
+	store                   *application.RecoveryStore
+	profiles                *application.ProfileStore
+	running                 bool
+	shuttingDown            bool
+	cancel                  context.CancelFunc
+	done                    chan struct{}
+	diagnostics             *application.DetectorDiagnostics
+	openCustomEffectsEditor func() error
 }
 
-func NewService() *Service {
+func NewService(openCustomEffectsEditor func() error) *Service {
 	return &Service{
-		diagnostics: application.NewDetectorDiagnostics(),
+		diagnostics:             application.NewDetectorDiagnostics(),
+		openCustomEffectsEditor: openCustomEffectsEditor,
 	}
 }
 func (s *Service) ServiceStartup(ctx context.Context, _ wailsapplication.ServiceOptions) error {
@@ -228,19 +229,12 @@ func (s *Service) SetProfileSettings(settings application.ProfileSettings) (appl
 func (s *Service) VisualEffectNames() []string {
 	return wintune.EffectNames()
 }
-func (s *Service) OpenWindowsPerformanceOptions() error {
-	return exec.Command("SystemPropertiesPerformance.exe").Start()
-}
-func (s *Service) AdoptCurrentWindowsVisualEffects() (application.ProfileSettings, error) {
-	settings, err := s.GetProfileSettings()
-	if err != nil {
-		return application.ProfileSettings{}, err
+func (s *Service) OpenCustomEffectsEditor() error {
+	s.mu.Lock()
+	open := s.openCustomEffectsEditor
+	s.mu.Unlock()
+	if open == nil {
+		return fmt.Errorf("Custom Visual Effects editor is not initialized")
 	}
-	current, err := (&wintune.VisualEffectsManager{}).Snapshot()
-	if err != nil {
-		return application.ProfileSettings{}, err
-	}
-	settings.CRDOnProfile = wintune.ProfileCustom
-	settings.CustomEffects = wintune.CustomEffectsFromSnapshot(current)
-	return s.SetProfileSettings(settings)
+	return open()
 }
