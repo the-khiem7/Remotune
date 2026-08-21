@@ -15,9 +15,9 @@ import (
 // version is set at build time via -ldflags "-X main.version=..."
 var version = "dev"
 
-// frontendAssets is the production Vue build. The Docker build pipeline creates
-// frontend/dist before compiling this package, so the shipped executable remains
-// a single portable file.
+// frontendAssets is the production Vue build. The host-native build pipeline creates
+// frontend/dist before compiling this package, so the shipped executable remains a
+// single portable file.
 //
 //go:embed all:frontend/dist
 var frontendAssets embed.FS
@@ -85,19 +85,9 @@ func main() {
 		mainWindow.Focus()
 	})
 
-	// Start the coordinator loop in background once the app is running.
-	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(event *application.ApplicationEvent) {
-		go svc.Run(app.Context())
-	})
-
 	// Run blocks until the application exits.
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}
 
-	// After app.Run returns, perform the explicit Quit sequence:
-	// stop transitions, restore owned state, clean up.
-	if err := svc.Shutdown(); err != nil {
-		slog.Error("restore during application shutdown failed", "error", err)
-	}
 }

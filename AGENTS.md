@@ -18,3 +18,8 @@ When creating a commit for an implementation task, include the related code chan
 ## Build script changes
 
 When changing build scripts, Docker tasks, or release automation, preserve the versioned-artifact convention above rather than introducing a fixed executable output path.
+
+## Code file comments
+
+- Do not add comments to code files. Code files must contain code only.
+- Put explanations, architecture rationale, operational guidance, and implementation context in the active documentation or baseline doc pack instead.

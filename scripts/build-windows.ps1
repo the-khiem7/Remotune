@@ -1,6 +1,7 @@
-# Remotune build delegate — produces out/remotune-v<version>.exe inside Docker.
+# Remotune host-native Windows packaging — produces out/remotune-v<version>.exe.
 # Usage: .\scripts\build-windows.ps1
-# This script ONLY orchestrates Docker. No project SDK runs on the host.
+# It intentionally runs Wails v3 generation and Go packaging directly so the
+# release contract remains the versioned portable artifact above.
 
 $ErrorActionPreference = 'Stop'
 
@@ -35,7 +36,7 @@ if (-not (Test-Path $wails)) {
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 Push-Location (Join-Path $PSScriptRoot '..\frontend')
 try {
-    npm install --package-lock=false
+    npm ci
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     npm run build
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

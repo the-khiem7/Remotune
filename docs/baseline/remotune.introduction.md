@@ -13,6 +13,8 @@ code_ref: "uncommitted"
 
 **[IMPLEMENTED]** The development workflow is now host-native: `%USERPROFILE%\go\bin\wails3.exe` is installed at the pinned `v3.0.0-beta.8`, and `scripts/dev.ps1` invokes Wails dev mode with Vite hot reload. Docker is no longer a supported development boundary.
 
+**[IMPLEMENTED]** The Wails Go module, CLI, and frontend runtime are locked to the same exact `v3.0.0-beta.8` release through `go.mod`, `frontend/package.json`, and `frontend/package-lock.json`. Wails lifecycle work is internal to `ServiceStartup`/`ServiceShutdown`; generated Vue bindings expose only operator commands and status reads.
+
 ## Authority and status
 
 This Baseline Docs pack is the complete active source of truth for Remotune. An implementer can understand, plan, build, verify, operate, and resume the project using only the five documents linked under [Pack navigation](#pack-navigation). Historical proposal material is non-authoritative and is not required to interpret any requirement.

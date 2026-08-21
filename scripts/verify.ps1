@@ -1,6 +1,7 @@
-# Remotune verify delegate — runs format, lint, static analysis, and tests inside Docker.
+# Remotune host-native verification — generates Wails assets, then runs format,
+# static analysis, frontend checks, and tests.
 # Usage: .\scripts\verify.ps1
-# This script ONLY orchestrates Docker. No project SDK runs on the host.
+# Docker is retired infrastructure and is not used by this verification path.
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Join-Path $PSScriptRoot '..'
@@ -13,7 +14,7 @@ try {
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     Push-Location frontend
     try {
-        npm install --package-lock=false
+        npm ci
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         npm run build
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

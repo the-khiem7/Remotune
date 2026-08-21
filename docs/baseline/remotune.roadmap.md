@@ -710,6 +710,12 @@ Gate coverage, by baseline requirement:
 
 **[VERIFIED]** The production Vue bundle completed successfully and `out/remotune-v0.1.4.exe` built with all 70 short Go tests passing. On 2026-08-20, its full control surface was also observed rendering against the live Wails runtime; Close-to-tray worked.
 
+## Wails v3 convention correction (2026-08-21)
+
+**[IMPLEMENTED]** `go.mod`, the host `wails3.exe`, `frontend/package.json`, and the committed npm lockfile now use exact `v3.0.0-beta.8` releases. Host-native dev, verification, and packaging use `npm ci`, not an unconstrained install, before binding generation and frontend build.
+
+**[IMPLEMENTED]** Lifecycle work moved to Wails `ServiceStartup` and `ServiceShutdown`, which are intentionally excluded from generated bindings. The Vue renderer receives only status and operator commands; the native tray retains a synchronous package-level shutdown path that blocks quit when state restoration fails. The `ApplicationStarted` event replaces the old busy-wait for application context.
+
 ## Exact next action
 
 Phases 1 through 5 and Windows icon packaging are implemented. The precise next implementation checkpoint is target-machine acceptance of v0.1.6: confirm Start with Windows launches after sign-in without a false path warning, then reproduce active-CRD apply -> Pause -> restore -> Resume -> reapply -> Explicit Quit and verify exact animation/taskbar restoration before exit. The remaining Phase 6 matrix then covers crash recovery, Explorer restart, Windows 10, multi-monitor/secondary taskbars, Event Log fault handling, portable-path movement, unavailable WebView2, and resource use.

@@ -28,7 +28,7 @@ dev_mode:
       - "*.go"
     git_ignore: true
   executes:
-    - cmd: 'cd frontend && npm install --package-lock=false'
+    - cmd: 'cd frontend && npm ci'
       type: once
     - cmd: 'cd frontend && npm run dev'
       type: background

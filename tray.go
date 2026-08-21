@@ -8,6 +8,7 @@ import (
 
 	"github.com/khiemnguyen/remotune/internal/lifecycle"
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 // buildTrayMenu creates the system tray context menu that is Remotune's primary
@@ -72,7 +73,7 @@ func buildTrayMenu(app *application.App, mainWindow *application.WebviewWindow, 
 
 	// Quit.
 	menu.Add("Quit").OnClick(func(ctx *application.Context) {
-		if err := svc.Shutdown(); err != nil {
+		if err := lifecycle.Shutdown(svc); err != nil {
 			statusItem.SetLabel("Quit blocked: restore failed")
 			slog.Error("quit blocked because restore failed", "error", err)
 			return
@@ -80,13 +81,10 @@ func buildTrayMenu(app *application.App, mainWindow *application.WebviewWindow, 
 		app.Quit()
 	})
 
-	// Periodic status refresh via a background goroutine (Phase 5 will use Wails
-	// events for reactive updates; this is a lightweight interim solution).
-	go func() {
-		// The initial refresh happens once the app context is available.
-		<-waitForContext(app)
+	// Refresh after Wails has created its application context, without a spin loop.
+	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(event *application.ApplicationEvent) {
 		refreshTrayMenu(statusItem, pauseItem, svc)
-	}()
+	})
 
 	return menu
 }
@@ -109,19 +107,4 @@ func refreshTrayMenu(statusItem *application.MenuItem, pauseItem *application.Me
 	} else {
 		pauseItem.SetLabel("Pause Automation")
 	}
-}
-
-// waitForContext returns a channel that closes once app.Context() is non-nil.
-// This is a minimal helper until we can use ApplicationStarted event.
-func waitForContext(app *application.App) <-chan struct{} {
-	ch := make(chan struct{})
-	go func() {
-		for {
-			if app.Context() != nil {
-				close(ch)
-				return
-			}
-		}
-	}()
-	return ch
 }

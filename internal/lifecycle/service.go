@@ -17,6 +17,7 @@ import (
 	"github.com/khiemnguyen/remotune/internal/application"
 	"github.com/khiemnguyen/remotune/internal/crd"
 	"github.com/khiemnguyen/remotune/internal/wintune"
+	wailsapplication "github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // Service owns the Remotune coordinator and CRD detector lifecycle. It bridges
@@ -32,17 +33,37 @@ type Service struct {
 	diagnostics  *application.DetectorDiagnostics
 }
 
-// NewService creates the lifecycle service with default configuration. The actual
-// coordinator start happens in Run, which is called after the Wails app is running.
+// NewService creates the lifecycle service with default configuration.
 func NewService() *Service {
 	return &Service{
 		diagnostics: application.NewDetectorDiagnostics(),
 	}
 }
 
-// Run starts the coordinator loop. It blocks until ctx is canceled or Quit is called.
-// This must be called from a goroutine after Wails ApplicationStarted.
-func (s *Service) Run(ctx context.Context) {
+// ServiceStartup starts the coordinator loop after Wails has created the application
+// context. Wails excludes this lifecycle method from the generated frontend bindings.
+func (s *Service) ServiceStartup(ctx context.Context, _ wailsapplication.ServiceOptions) error {
+	go s.run(ctx)
+	return nil
+}
+
+// ServiceShutdown stops the detector and restores any owned Windows state during
+// Wails shutdown. Wails excludes this lifecycle method from generated bindings.
+func (s *Service) ServiceShutdown() error {
+	return s.shutdown()
+}
+
+// Shutdown performs the native tray quit sequence without exposing a service method
+// to the frontend binding surface.
+func Shutdown(s *Service) error {
+	if s == nil {
+		return fmt.Errorf("lifecycle service is nil")
+	}
+	return s.shutdown()
+}
+
+// run starts the coordinator loop. It blocks until ctx is canceled or the app quits.
+func (s *Service) run(ctx context.Context) {
 	s.mu.Lock()
 	if s.running {
 		s.mu.Unlock()
@@ -96,9 +117,8 @@ func (s *Service) Run(ctx context.Context) {
 	}
 }
 
-// Shutdown performs the explicit Quit sequence: stop transitions, restore owned state,
-// and clean up resources. Called by the Wails shutdown hook.
-func (s *Service) Shutdown() error {
+// shutdown stops transitions, restores owned state, and cleans up resources.
+func (s *Service) shutdown() error {
 	s.mu.Lock()
 	if s.shuttingDown {
 		s.mu.Unlock()
