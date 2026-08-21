@@ -179,7 +179,7 @@ Restore(snapshot)
 GetCurrentState()
 ```
 
-**[IMPLEMENTED]** The current manager exposes only `ApplyBestPerformance()`. **[PLANNED]** Phase 6 replaces that single-target boundary with a profile compiler and `ApplyProfile(profile)` while retaining `Snapshot()` and `Restore(snapshot)` as distinct recovery operations. The user-facing scope is the 17-item Visual Effects checklist only; it excludes Advanced and Data Execution Prevention settings.
+**[IMPLEMENTED]** `VisualEffectsManager.ApplyProfile(profile, custom)` replaces the single-target boundary while retaining `Snapshot()` and `Restore(snapshot)` as distinct recovery operations. `internal/wintune/profile.go` compiles Best Appearance, Best Performance, and Custom into a three-layer target; Let Windows choose preserves the live effect values and writes label `0`, because Windows does not recompute values when that label changes. The user-facing scope is the 17-item Visual Effects checklist only; it excludes Advanced and Data Execution Prevention settings.
 
 **[VERIFIED]** The accessor surface is `SystemParametersInfo`. Seventeen `SPI_GET*` actions plus `SPI_GETANIMATION` cover the individual effects and all succeed non-elevated; the constants are tabulated in the Phase 0 evidence. The preset selection itself is `VisualFXSetting` under `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects` (`0` Let Windows choose, `1` Best appearance, `2` Best performance, `3` Custom).
 
@@ -199,7 +199,7 @@ layer 3  UserPreferencesMask, opaque, verbatim
 
 **[VERIFIED]** `ApplyBestPerformance()` reproduces the 22-value set that the real Windows preset changes, enumerated in the Phase 0 evidence. It must not disable effects the preset leaves alone, and it must account for `IconsOnly` rising from 0 to 1 rather than falling.
 
-**[PLANNED]** A `VisualEffectsProfile` is declarative rather than a copied machine snapshot. Built-in profiles compile the supported target combinations; `Remotune Custom` persists the 17 Visual Effects checkbox choices. The compiler derives known mask bits from selected SPI values while carrying unknown mask bits from the live baseline, writes the profile label last, and delegates all writes to the same convergence path as restore. A profile selection is not trusted until the observed three-layer state matches its target.
+**[IMPLEMENTED]** `VisualEffectsProfile` is declarative rather than a copied machine snapshot. Built-in profiles compile the supported target combinations; `Remotune Custom` persists the 17 Visual Effects checkbox choices. The compiler derives known mask bits from selected SPI values while carrying unknown mask bits from the live baseline, writes the profile label last, and delegates all writes to the same convergence path as restore. A profile selection is not trusted until the observed three-layer state matches its target.
 
 **[VERIFIED]** `FontSmoothing` is not boolean: the registry held `2` while the SPI accessor reported `1`. Restoring from the boolean would silently downgrade ClearType, so the registry value is authoritative and `FontSmoothingType` travels with it.
 

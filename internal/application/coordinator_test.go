@@ -41,7 +41,7 @@ func (f *fakeVE) Snapshot() (*wintune.VisualEffectsSnapshot, error) {
 	return &cp, nil
 }
 
-func (f *fakeVE) ApplyBestPerformance() (wintune.CategoryResult, error) {
+func (f *fakeVE) ApplyProfile(_ wintune.VisualEffectsProfile, _ map[string]bool) (wintune.CategoryResult, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.applyCalls++

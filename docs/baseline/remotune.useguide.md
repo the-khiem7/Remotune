@@ -36,7 +36,7 @@ CRD disconnects
 └─ taskbar auto-hide returns to the exact saved state
 ```
 
-**[IMPLEMENTED]** The current build applies Best Performance and restores the exact saved state. **[PLANNED]** The profile release adds CRD-on choices for Let Windows choose, Best Appearance, Best Performance, and Remotune Custom; CRD-off choices for Revert to snapshot, Let Windows choose, Best Appearance, and Best Performance. Remotune does not control CRD encoding, transport, or network behavior.
+**[IMPLEMENTED]** The current build applies the selected CRD-on profile and restores or deliberately replaces the exact saved state according to the selected CRD-off action. The UI provides CRD-on choices for Let Windows choose, Best Appearance, Best Performance, and Remotune Custom; CRD-off choices for Revert to snapshot, Let Windows choose, Best Appearance, and Best Performance. Remotune does not control CRD encoding, transport, or network behavior. The profile surface has local build/test evidence; target-machine behavior for every selection remains to be observed.
 
 ## Install and first run
 
@@ -109,7 +109,7 @@ The surface may display:
 - Start with Windows;
 - Restore Now and Settings/diagnostics.
 
-**[PLANNED]** Settings will display the Visual Effects radios and 17 checkboxes from the Windows Performance Options Visual Effects tab. Editing a checkbox selects Remotune Custom; returning to an exact built-in combination selects that profile. The UI must not include Performance Options Advanced/Data Execution Prevention settings, Minimal/Recommended/Aggressive profiles, or a dashboard.
+**[IMPLEMENTED]** Settings display the Visual Effects radios and 17 checkboxes from the Windows Performance Options Visual Effects tab. Selecting Custom keeps its editor open. Editing a checkbox selects Remotune Custom; returning through checkbox edits to an exact built-in combination selects that profile. The UI does not include Performance Options Advanced/Data Execution Prevention settings, Minimal/Recommended/Aggressive profiles, or a dashboard.
 
 ## Tray behavior
 

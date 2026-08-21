@@ -281,6 +281,9 @@ func (m *VisualEffectsManager) convergeTo(target *VisualEffectsSnapshot) (*Visua
 	return observed, diff, nil
 }
 func (m *VisualEffectsManager) ApplyBestPerformance() (CategoryResult, error) {
+	return m.ApplyProfile(ProfileBestPerformance, nil)
+}
+func (m *VisualEffectsManager) ApplyProfile(profile VisualEffectsProfile, custom map[string]bool) (CategoryResult, error) {
 	res := CategoryResult{Category: CategoryVisualEffects}
 
 	before, err := m.Snapshot()
@@ -289,7 +292,11 @@ func (m *VisualEffectsManager) ApplyBestPerformance() (CategoryResult, error) {
 		return res, err
 	}
 
-	target := BestPerformanceTarget(before)
+	target, err := ProfileTarget(before, profile, custom)
+	if err != nil {
+		res.Err = err
+		return res, err
+	}
 	observed, diff, err := m.convergeTo(target)
 	if err != nil {
 		res.Err = err
@@ -300,10 +307,6 @@ func (m *VisualEffectsManager) ApplyBestPerformance() (CategoryResult, error) {
 		res.Err = fmt.Errorf("apply did not converge after %d attempts, %d value(s) differ: %v",
 			convergeAttempts, len(diff), diff)
 		return res, res.Err
-	}
-	if err := verifyBestPerformance(observed); err != nil {
-		res.Err = err
-		return res, err
 	}
 	res.Verified = true
 	return res, nil

@@ -575,7 +575,7 @@ Gate coverage, by baseline requirement:
 
 ## Phase 5 — Compact Vue UI
 
-**Status:** **[IMPLEMENTED]** in the working tree; live Windows acceptance remains pending.
+**Status:** **[IMPLEMENTED]** in the working tree; the Windows sign-out/sign-in autostart proof remains deferred to Phase 7/release acceptance and does not block Phase 6.
 
 ### Deliverables
 
@@ -593,7 +593,7 @@ Gate coverage, by baseline requirement:
 
 ## Phase 6 — Visual Effects profiles
 
-**Status:** **[PLANNED]**. This phase expands the remote-session automation contract; it does not alter the detector, taskbar auto-hide ownership, or recovery invariant.
+**Status:** **[IMPLEMENTED]** and locally verified by the Wails host-native gate on 2026-08-21. Target-machine observation of each profile remains **[UNVERIFIED]**. This phase expands the remote-session automation contract; it does not alter the detector, taskbar auto-hide ownership, or recovery invariant.
 
 ### Product contract
 
@@ -602,25 +602,26 @@ Gate coverage, by baseline requirement:
 | CRD ON | Let Windows choose, Best Appearance, Best Performance, Custom | The selected target applies while the CRD session is connected. Custom is the persisted 17-checkbox Remotune profile. |
 | CRD OFF | Revert to snapshot, Let Windows choose, Best Appearance, Best Performance | The selected action applies after disconnection. Snapshot is the exact pre-connection state; the other choices intentionally replace it. |
 
-Selecting or clearing an individual CRD-on checkbox chooses `Custom`. If the resulting full selection equals a built-in target, the UI normalizes to that target. `VisualFXSetting` remains a label written only after the complete target state converges; it is not used as a substitute for the effect values.
+Selecting the CRD-on `Custom` radio keeps Custom visible so its values can be edited. Selecting or clearing an individual checkbox chooses `Custom`; if that edited full selection equals a built-in target, the UI normalizes to that target. `VisualFXSetting` remains a label written only after the complete target state converges; it is not used as a substitute for the effect values.
 
 ### Deliverables
 
-- Persisted `CRDOnProfile` and `CRDOffAction` settings, with a versioned Remotune Custom Visual Effects selection.
-- A profile compiler that produces the complete three-layer target state and reuses the existing bounded convergence/verification path.
-- Built-in target definitions for Let Windows choose, Best Appearance, and Best Performance, with the screenshot-supplied checkbox combinations retained as the product reference.
-- A compact Wails settings surface that mirrors the Visual Effects tab's four radios and 17 checkboxes only.
-- Coordinator lifecycle changes: capture the original snapshot before the first connected override; restore it only for the snapshot off-action; retire it only after a selected off profile has converged and verified.
+- **[IMPLEMENTED]** Persisted `CRDOnProfile` and `CRDOffAction` settings, with a schema-versioned Remotune Custom selection.
+- **[IMPLEMENTED]** A profile compiler that produces a complete three-layer target state and reuses the bounded convergence/verification path.
+- **[IMPLEMENTED]** Built-in targets for Let Windows choose, Best Appearance, and Best Performance. Let Windows choose is accurately implemented as the Windows label plus the current effect values because writing label `0` does not recompute effects.
+- **[IMPLEMENTED]** A compact Wails settings surface with four CRD-on radios, four CRD-off choices, and the bounded 17-item Custom list.
+- **[IMPLEMENTED]** Coordinator lifecycle changes: capture the original snapshot before the first connected override; restore it only for the snapshot off-action; retire it only after a selected off profile has converged and verified.
 - Diagnostics that distinguish configured profile, observed Visual Effects state, owned snapshot, and the most recent apply/restore outcome.
 
 ### Acceptance gate
 
-- Start from each built-in profile and an arbitrary Custom selection; CRD ON applies the selected target and reports any residual difference.
+- **[VERIFIED]** `wails3 task verify` regenerated bindings, completed Bun frozen-lockfile production build, resource generation, `go vet`, and the short Go suite after the Phase 6 implementation.
+- **[IMPLEMENTED]** Unit coverage exercises profile-store normalization, the profile compiler's label/mask behavior, and selected CRD-off profile retirement. Target-machine observation remains pending.
 - Custom editing selects Custom; an exact built-in match selects its corresponding radio.
 - CRD OFF with Snapshot restores every affected value exactly, including the opaque mask and font smoothing type.
 - CRD OFF with a built-in profile applies that profile, verifies it, and retires ownership so later Quit does not undo the chosen disconnected state.
 - Pause and Explicit Quit restore a still-owned snapshot; failed applies/restores retain recovery data and surface the residual error.
-- The existing live v0.1.6 autostart and Pause/Resume/Quit acceptance remains mandatory before release.
+- The deferred v0.1.7 sign-out/sign-in autostart proof remains mandatory before release; it is not a Phase 6 implementation dependency.
 
 ## Phase 7 — Hardening
 
@@ -752,7 +753,7 @@ Selecting or clearing an individual CRD-on checkbox chooses `Custom`. If the res
 
 ## Exact next action
 
-Phases 1 through 5 and Windows icon packaging are implemented, but Phase 5 acceptance is still open. The v0.1.7 Start with Windows action has a verified quoted `HKCU\...\Run` entry whose normalized path exists and matches the running executable; Pause/Resume and Explicit Quit have user-observed expected restoration behavior. The remaining exact checkpoint is one target-machine sign-out/sign-in that confirms v0.1.7 launches without a false path warning. `build/config.yml` is now the sole semantic-version source for Wails metadata and `out/remotune-v<version>.exe`; the redundant secondary version source is retired. Phase 6 is an approved, documented plan only; do not begin its profile-domain, persistence, or Wails UI implementation until this Phase 5 gate closes. Phase 7 then covers crash recovery, Explorer restart, Windows 10, multi-monitor/secondary taskbars, Event Log fault handling, portable-path movement, unavailable WebView2, and resource use.
+Phase 5 implementation and Windows icon packaging are complete; its v0.1.7 sign-out/sign-in autostart proof is explicitly **[DEFERRED]** to Phase 7/release acceptance. Phase 6 is implemented and passed the host-native Wails verification gate; target-machine profile observation remains open. The currently verified Phase 5 evidence is the quoted `HKCU\...\Run` entry, whose normalized path exists and matches the running executable, plus user-observed expected Pause/Resume and Explicit Quit restoration. `build/config.yml` remains the sole semantic-version source for Wails metadata and `out/remotune-v<version>.exe`; the redundant secondary version source is retired. The next implementation phase is Phase 7: deferred login-autostart proof, crash recovery, Explorer restart, Windows 10, multi-monitor/secondary taskbars, Event Log fault handling, portable-path movement, unavailable WebView2, and resource use.
 
 ## Runtime incident checkpoint (2026-08-20)
 

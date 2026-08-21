@@ -14,7 +14,7 @@ import (
 
 type VisualEffectsAdapter interface {
 	Snapshot() (*wintune.VisualEffectsSnapshot, error)
-	ApplyBestPerformance() (wintune.CategoryResult, error)
+	ApplyProfile(wintune.VisualEffectsProfile, map[string]bool) (wintune.CategoryResult, error)
 	Restore(*wintune.VisualEffectsSnapshot) (wintune.CategoryResult, error)
 }
 type TaskbarAdapter interface {
@@ -26,6 +26,7 @@ type AutomationConfig struct {
 	Enabled       bool
 	VisualEffects bool
 	Taskbar       bool
+	Profiles      ProfileSettings
 }
 
 func (c AutomationConfig) anyCategoryEnabled() bool {
@@ -51,6 +52,7 @@ type Coordinator struct {
 }
 
 func NewCoordinator(store *RecoveryStore, ve VisualEffectsAdapter, tb TaskbarAdapter, cfg AutomationConfig) *Coordinator {
+	cfg.Profiles = cfg.Profiles.Normalized()
 	return &Coordinator{
 		store: store,
 		ve:    ve,
@@ -58,6 +60,22 @@ func NewCoordinator(store *RecoveryStore, ve VisualEffectsAdapter, tb TaskbarAda
 		cfg:   cfg,
 		state: TuningUnknown,
 	}
+}
+func (c *Coordinator) UpdateProfiles(settings ProfileSettings) error {
+	settings = settings.Normalized()
+	if err := settings.Validate(); err != nil {
+		return err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.quitting {
+		return ErrShuttingDown
+	}
+	c.cfg.Profiles = settings
+	if c.desiredOwned() {
+		return c.applyLocked()
+	}
+	return nil
 }
 
 type Status struct {
@@ -161,7 +179,7 @@ func (c *Coordinator) reconcileLocked() error {
 	case c.desiredOwned():
 		return c.applyLocked()
 	case c.owned != nil:
-		return c.restoreLocked()
+		return c.releaseLocked()
 	default:
 		if !c.state.IsTransient() {
 			c.state = TuningBaseline
@@ -200,7 +218,7 @@ func (c *Coordinator) applyLocked() error {
 
 	var results []wintune.CategoryResult
 	if c.cfg.VisualEffects {
-		res, _ := c.ve.ApplyBestPerformance()
+		res, _ := c.ve.ApplyProfile(c.cfg.Profiles.CRDOnProfile, c.cfg.Profiles.CustomEffects)
 		results = append(results, res)
 	}
 	if c.cfg.Taskbar {
@@ -215,6 +233,36 @@ func (c *Coordinator) applyLocked() error {
 	}
 	c.state = TuningPartialError
 	return result.Err()
+}
+func (c *Coordinator) releaseLocked() error {
+	if c.cfg.Profiles.CRDOffAction == CRDOffRestoreSnapshot {
+		return c.restoreLocked()
+	}
+	if c.owned == nil {
+		return ErrNoRecovery
+	}
+	c.state = TuningRestoring
+	var results []wintune.CategoryResult
+	if c.owned.VisualEffects != nil {
+		res, _ := c.ve.ApplyProfile(c.cfg.Profiles.OffProfile(), nil)
+		results = append(results, res)
+	}
+	if c.owned.Taskbar != nil {
+		res, _ := c.tb.Restore(c.owned.Taskbar)
+		results = append(results, res)
+	}
+	result := wintune.Result{Categories: results}
+	if !result.FullyVerified() {
+		c.state = TuningPartialError
+		return result.Err()
+	}
+	if err := c.store.Retire(); err != nil {
+		c.state = TuningRecoveryRequired
+		return err
+	}
+	c.owned = nil
+	c.state = TuningBaseline
+	return nil
 }
 func (c *Coordinator) restoreLocked() error {
 	if c.owned == nil {

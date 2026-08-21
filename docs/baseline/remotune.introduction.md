@@ -205,7 +205,7 @@ Reliable connection detection is the most important technical component: unrelia
 - **[PLANNED]** `Restore Now` restores only a valid Remotune-owned snapshot and otherwise reports that no restorable snapshot exists.
 - **[PLANNED]** Support `Start with Windows`; moving or deleting a portable executable may invalidate startup registration and must be handled or documented clearly.
 - **[PLANNED]** The UI may enable/disable overall automation and optionally the Visual Effects and taskbar categories independently.
-- **[PLANNED]** The CRD-on profile and CRD-off action are durable preferences. Changing a CRD-on profile while CRD is connected reconciles to the new target without replacing the original snapshot; changing a CRD-off action controls the next disconnected transition.
+- **[IMPLEMENTED]** The CRD-on profile and CRD-off action are durable preferences. Changing a CRD-on profile while CRD is connected reconciles to the new target without replacing the original snapshot; changing a CRD-off action controls the next disconnected transition.
 
 ## Product and UX constraints
 

@@ -18,6 +18,7 @@ type Service struct {
 	mu           sync.Mutex
 	coordinator  *application.Coordinator
 	store        *application.RecoveryStore
+	profiles     *application.ProfileStore
 	running      bool
 	shuttingDown bool
 	cancel       context.CancelFunc
@@ -77,11 +78,25 @@ func (s *Service) run(ctx context.Context) {
 	s.mu.Lock()
 	s.store = store
 	s.mu.Unlock()
+	profileStore, err := application.NewProfileStore("")
+	if err != nil {
+		slog.Error("failed to initialize profile store", "error", err)
+		return
+	}
+	profileSettings, err := profileStore.Load()
+	if err != nil {
+		slog.Error("failed to load profile settings", "error", err)
+		return
+	}
+	s.mu.Lock()
+	s.profiles = profileStore
+	s.mu.Unlock()
 
 	cfg := application.AutomationConfig{
 		Enabled:       true,
 		VisualEffects: true,
 		Taskbar:       true,
+		Profiles:      profileSettings,
 	}
 
 	coord := application.NewCoordinator(store, ve, tb, cfg)
@@ -179,4 +194,36 @@ func (s *Service) SetAutostart(enabled bool) (AutostartStatus, error) {
 }
 func (s *Service) PortablePathStatus() PortablePathStatus {
 	return CheckPortablePath()
+}
+func (s *Service) GetProfileSettings() (application.ProfileSettings, error) {
+	s.mu.Lock()
+	store := s.profiles
+	s.mu.Unlock()
+	if store == nil {
+		return application.DefaultProfileSettings(), nil
+	}
+	return store.Load()
+}
+func (s *Service) SetProfileSettings(settings application.ProfileSettings) (application.ProfileSettings, error) {
+	settings = settings.Normalized()
+	if err := settings.Validate(); err != nil {
+		return application.ProfileSettings{}, err
+	}
+	s.mu.Lock()
+	store := s.profiles
+	coord := s.coordinator
+	s.mu.Unlock()
+	if store == nil || coord == nil {
+		return application.ProfileSettings{}, fmt.Errorf("profile settings are not initialized")
+	}
+	if err := store.Save(settings); err != nil {
+		return application.ProfileSettings{}, err
+	}
+	if err := coord.UpdateProfiles(settings); err != nil {
+		return application.ProfileSettings{}, err
+	}
+	return settings, nil
+}
+func (s *Service) VisualEffectNames() []string {
+	return wintune.EffectNames()
 }

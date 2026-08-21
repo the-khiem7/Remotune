@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { GetAutostartStatus, Pause, PortablePathStatus, RestoreNow, Resume, SetAutostart, Status } from './wails'
+import { GetAutostartStatus, GetProfileSettings, Pause, PortablePathStatus, RestoreNow, Resume, SetAutostart, SetProfileSettings, Status, VisualEffectNames } from './wails'
 
 type CoordinatorStatus = {
   Tuning: number
@@ -33,12 +33,21 @@ type PortablePathStatus = {
   CurrentPath: string
 }
 
+type ProfileSettings = {
+  schemaVersion: number
+  crdOnProfile: string
+  crdOffAction: string
+  customEffects: Record<string, boolean>
+}
+
 const crdLabels = ['Unknown', 'Disconnected', 'Connected']
 const tuningLabels = ['Unknown', 'Baseline', 'Applying', 'Active', 'Restoring', 'Partial/Error', 'Recovery Required']
 
 const status = ref<CoordinatorStatus | null>(null)
 const autostart = ref<AutostartStatus | null>(null)
 const portablePath = ref<PortablePathStatus | null>(null)
+const profiles = ref<ProfileSettings | null>(null)
+const effectNames = ref<string[]>([])
 const busy = ref(false)
 const error = ref('')
 const notice = ref('')
@@ -55,13 +64,19 @@ const pauseHint = computed(() => status.value?.Paused
   : status.value?.Owned
     ? 'Pause restores the Remotune-owned baseline, then stops automation.'
     : 'Pause stops automation. There is no Remotune-owned snapshot to restore yet.')
+const profileLabel = computed(() => ({ windowsChoose: 'Let Windows choose', bestAppearance: 'Best Appearance', bestPerformance: 'Best Performance', custom: 'Custom' }[profiles.value?.crdOnProfile ?? ''] ?? 'Loading'))
+const effectLabel = (name: string) => ({
+  AnimateControls: 'Animate controls and elements inside windows', AnimateWindows: 'Animate windows when minimizing and maximizing', TaskbarAnimations: 'Animations in the taskbar', EnablePeek: 'Enable Peek', MenuAnimation: 'Fade or slide menus into view', TooltipAnimation: 'Fade or slide ToolTips into view', SelectionFade: 'Fade out menu items after clicking', SaveTaskbarThumbnails: 'Save taskbar thumbnail previews', CursorShadow: 'Show shadows under mouse pointer', DropShadow: 'Show shadows under windows', ShowThumbnails: 'Show thumbnails instead of icons', TranslucentSelection: 'Show translucent selection rectangle', DragFullWindows: 'Show window contents while dragging', ComboBoxAnimation: 'Slide open combo boxes', FontSmoothing: 'Smooth edges of screen fonts', ListBoxSmoothScrolling: 'Smooth-scroll list boxes', IconLabelShadow: 'Use drop shadows for icon labels on the desktop'
+}[name] ?? name)
 
 async function refresh(clearError = true) {
   try {
-    const [nextStatus, nextAutostart, nextPortablePath] = await Promise.all([Status(), GetAutostartStatus(), PortablePathStatus()])
+    const [nextStatus, nextAutostart, nextPortablePath, nextProfiles, nextEffectNames] = await Promise.all([Status(), GetAutostartStatus(), PortablePathStatus(), GetProfileSettings(), VisualEffectNames()])
     status.value = nextStatus as CoordinatorStatus
     autostart.value = nextAutostart as AutostartStatus
     portablePath.value = nextPortablePath as PortablePathStatus
+    profiles.value = nextProfiles as ProfileSettings
+    effectNames.value = nextEffectNames as string[]
     if (clearError) error.value = ''
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause)
@@ -104,6 +119,32 @@ function toggleAutostart() {
   return run(() => SetAutostart(!autostartEnabled.value), 'Start with Windows updated.')
 }
 
+function updateProfiles(update: Partial<ProfileSettings>, successNotice: string) {
+  if (!profiles.value) return Promise.resolve()
+  const next = {
+    ...profiles.value,
+    ...update,
+    customEffects: { ...profiles.value.customEffects, ...(update.customEffects ?? {}) },
+  }
+  return run(async () => { profiles.value = await SetProfileSettings(next as Parameters<typeof SetProfileSettings>[0]) as ProfileSettings }, successNotice)
+}
+
+function selectOnProfile(profile: string) {
+  return updateProfiles({ crdOnProfile: profile }, 'CRD-on Visual Effects profile updated.')
+}
+
+function selectOffAction(action: string) {
+  return updateProfiles({ crdOffAction: action }, 'CRD-off action updated.')
+}
+
+function toggleCustomEffect(name: string) {
+  if (!profiles.value) return Promise.resolve()
+  const customEffects = { ...profiles.value.customEffects, [name]: !profiles.value.customEffects[name] }
+  const values = effectNames.value.map(effect => customEffects[effect])
+  const crdOnProfile = values.every(Boolean) ? 'bestAppearance' : values.every(value => !value) ? 'bestPerformance' : 'custom'
+  return updateProfiles({ crdOnProfile, customEffects }, 'Custom Visual Effects profile updated.')
+}
+
 onMounted(async () => {
   await refresh()
   refreshTimer = window.setInterval(refresh, 1500)
@@ -142,8 +183,21 @@ onUnmounted(() => {
           <span></span>
         </button>
       </div>
-      <div class="detail-row"><span>Visual Effects</span><strong>Best Performance during CRD</strong></div>
+      <div class="detail-row"><span>Visual Effects</span><strong>{{ profileLabel }} during CRD</strong></div>
       <div class="detail-row"><span>Taskbar auto-hide</span><strong>Off during CRD</strong></div>
+    </section>
+
+    <section class="card profiles" aria-labelledby="profiles-heading">
+      <div class="section-heading compact"><div><h2 id="profiles-heading">Visual Effects profiles</h2><p>Profiles are applied and verified by Windows, not inferred by this UI.</p></div></div>
+      <fieldset class="profile-group" :disabled="busy || !profiles"><legend>CRD ON</legend>
+        <label v-for="option in [{ value: 'windowsChoose', label: 'Let Windows choose' }, { value: 'bestAppearance', label: 'Best Appearance' }, { value: 'bestPerformance', label: 'Best Performance' }, { value: 'custom', label: 'Custom' }]" :key="option.value" class="choice"><input type="radio" name="crd-on" :checked="profiles?.crdOnProfile === option.value" @change="selectOnProfile(option.value)"><span>{{ option.label }}</span></label>
+      </fieldset>
+      <fieldset class="profile-group" :disabled="busy || !profiles"><legend>CRD OFF</legend>
+        <label v-for="option in [{ value: 'restoreSnapshot', label: 'Revert to snapshot' }, { value: 'windowsChoose', label: 'Let Windows choose' }, { value: 'bestAppearance', label: 'Best Appearance' }, { value: 'bestPerformance', label: 'Best Performance' }]" :key="option.value" class="choice"><input type="radio" name="crd-off" :checked="profiles?.crdOffAction === option.value" @change="selectOffAction(option.value)"><span>{{ option.label }}</span></label>
+      </fieldset>
+      <div v-if="profiles?.crdOnProfile === 'custom'" class="effects-list">
+        <label v-for="name in effectNames" :key="name" class="effect"><input type="checkbox" :checked="profiles.customEffects[name]" :disabled="busy" @change="toggleCustomEffect(name)"><span>{{ effectLabel(name) }}</span></label>
+      </div>
     </section>
 
     <section class="card" aria-labelledby="state-heading">

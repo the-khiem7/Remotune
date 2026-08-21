@@ -26,7 +26,7 @@ All items in this section are **[DECIDED]**.
 3. CRD is the first provider, but the product brand remains provider-neutral.
 4. On CRD connection, enabled automation captures the original affected state, applies the selected CRD-on Visual Effects profile, and disables Controlled-machine taskbar auto-hide.
 5. On CRD disconnection, Remotune follows the selected CRD-off action: restore the exact previous affected Windows state, or apply Let Windows choose, Best Appearance, or Best Performance deliberately.
-6. `Best Performance`, `Best Appearance`, and `Let Windows choose` are Windows Performance Options targets. `Custom` is a Remotune-persisted selection of the 17 Visual Effects checkboxes and is available only for CRD-on automation.
+6. `Best Performance`, `Best Appearance`, and `Let Windows choose` are Windows Performance Options targets. `Custom` is a Remotune-persisted selection of the 17 Visual Effects checkboxes and is available only for CRD-on automation. **[IMPLEMENTED]** The profile compiler and Wails surface exist; target-machine observation remains **[UNVERIFIED]**.
 7. Exact snapshot/restore and durable crash recovery are mandatory.
 8. Windows remains the source of truth for applied Visual Effects state. Remotune owns the bounded profile configuration and automation lifecycle.
 9. Remotune exposes only the Performance Options Visual Effects radios and 17 checkboxes required for CRD automation. It does not expose Advanced/Data Execution Prevention settings, generic Windows tuning, or Minimal/Recommended/Aggressive profiles.
