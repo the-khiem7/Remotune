@@ -11,7 +11,7 @@ code_ref: "uncommitted"
 
 **[IMPLEMENTED]** `normalizeAutostartPath` trims optional outer quotes and whitespace from the Windows Run value before comparing it to the current executable. This preserves quoted portable-path registration while removing the false moved-path warning; focused lifecycle tests cover it.
 
-**[IMPLEMENTED]** Host-native development uses the pinned `%USERPROFILE%\go\bin\wails3.exe` and `build/config.yml`. `scripts/dev.ps1` runs Wails dev mode; Vite hot-reloads frontend changes while Wails rebuilds and relaunches on Go changes.
+**[IMPLEMENTED]** Host-native development uses the pinned `%USERPROFILE%\go\bin\wails3.exe` and `build/config.yml`. `wails3 dev` runs Wails dev mode; Vite hot-reloads frontend changes while Wails rebuilds and relaunches on Go changes. The root `Taskfile.yml` supplies `wails3 task verify` and `wails3 task windows:portable` without project-specific PowerShell wrappers.
 
 ## Implementation status
 
@@ -33,7 +33,7 @@ code_ref: "uncommitted"
 
 The Go module, `wails3.exe`, and `@wailsio/runtime` are all fixed at `v3.0.0-beta.8`; `package-lock.json` makes `npm ci` reproducible. A caret range is not acceptable for this Beta framework because it can silently place a different runtime beside the pinned Go transport.
 
-`scripts/dev.ps1` invokes host-native Wails dev mode. The Wails execution graph generates bindings, starts Vite on port 9245, builds the native app, and runs it against the development server. Docker files are retired infrastructure, not supported development tooling. The `.syso` remains reproducible and ignored; the SVG, PNGs, ICO, and manifest are the committed inputs.
+`wails3 dev` invokes host-native Wails dev mode. The Wails execution graph generates bindings, starts Vite on port 9245, builds the native app, and runs it against the development server. `wails3 task verify` generates bindings and resources, runs the reproducible frontend build, then enforces formatting, `go vet`, and short Go tests. `wails3 task windows:portable` verifies the semantic version agrees between `version.txt` and `build/config.yml`, preserves the versioned artifact convention, and refuses a locked destination. Docker files are retired infrastructure, not supported development tooling. The `.syso` remains reproducible and ignored; the SVG, PNGs, ICO, and manifest are the committed inputs.
 
 ## Architecture
 
@@ -519,7 +519,7 @@ Adding a detector such as `RDPDetector`, `RustDeskDetector`, or `AnyDeskDetector
 ```text
 %USERPROFILE%\go\bin\wails3.exe → pinned Wails CLI v3.0.0-beta.8
 build/config.yml    → Wails dev-mode execution graph
-scripts/            → dev.ps1, verify.ps1, build-windows.ps1, shell.ps1 (host-native)
+Taskfile.yml        → Wails task graph for verification and portable packaging
 ```
 
 Key design choices:
@@ -527,6 +527,6 @@ Key design choices:
 - **No mingw-w64**: Wails v3 Windows builds are CGO-free via `go-winloader`.
 - **Exact runtime lock**: `frontend/package-lock.json` and `npm ci` keep the frontend runtime on the same `v3.0.0-beta.8` release as the Go module and CLI.
 - **Fast feedback**: Vite HMR updates frontend changes without a native rebuild; Wails detects Go changes and relaunches the native app.
-- **Native verification**: `scripts/verify.ps1` generates bindings and frontend assets, checks formatting, runs `go vet ./...`, and executes the Windows-native short test suite.
+- **Native verification**: `wails3 task verify` generates bindings and frontend assets, checks formatting, runs `go vet ./...`, and executes the Windows-native short test suite.
 
 Historical Docker reference: [docs/runbook/docker-build-environment.md](../runbook/docker-build-environment.md). The active host-native workflow is recorded in this baseline pack.

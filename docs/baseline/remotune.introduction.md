@@ -11,7 +11,7 @@ code_ref: "uncommitted"
 
 **[VERIFIED]** In the target-machine v0.1.5 run, the operator confirmed animation was applied while the UI reported an active CRD session and available recovery snapshot. **[IMPLEMENTED]** `out/remotune-v0.1.6.exe` packages the Start with Windows quoted-path comparison correction. **[UNVERIFIED]** v0.1.6 still needs a target-machine run, startup-after-sign-in observation, and full Pause/Resume/Quit recovery acceptance.
 
-**[IMPLEMENTED]** The development workflow is now host-native: `%USERPROFILE%\go\bin\wails3.exe` is installed at the pinned `v3.0.0-beta.8`, and `scripts/dev.ps1` invokes Wails dev mode with Vite hot reload. Docker is no longer a supported development boundary.
+**[IMPLEMENTED]** The development workflow is now host-native: `%USERPROFILE%\go\bin\wails3.exe` is installed at the pinned `v3.0.0-beta.8`; `wails3 dev` invokes the `build/config.yml` dev graph with Vite hot reload, and `wails3 task` runs the repository Taskfile for verification and portable Windows packaging. Docker is no longer a supported development boundary.
 
 **[IMPLEMENTED]** The Wails Go module, CLI, and frontend runtime are locked to the same exact `v3.0.0-beta.8` release through `go.mod`, `frontend/package.json`, and `frontend/package-lock.json`. Wails lifecycle work is internal to `ServiceStartup`/`ServiceShutdown`; generated Vue bindings expose only operator commands and status reads.
 

@@ -9,8 +9,6 @@ info:
   comments: ""
   version: "0.1.6"
 
-# Wails dev mode runs entirely on the Windows host. Vite owns frontend HMR;
-# Wails rebuilds and relaunches the native process when Go sources change.
 dev_mode:
   root_path: .
   log_level: warn
