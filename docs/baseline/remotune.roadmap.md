@@ -3,8 +3,8 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "roadmap"
 status: "active"
-updated: "2026-08-20"
-code_ref: "990cb3fed47dae98bb4bb1a7b0dc7f6b2badbd6a"
+updated: "2026-08-21"
+code_ref: "uncommitted"
 ---
 
 # Remotune Implementation Roadmap
@@ -710,7 +710,7 @@ Gate coverage, by baseline requirement:
 
 ## Exact next action
 
-Phases 1 through 5 and Windows icon packaging are implemented. The precise next implementation checkpoint is to make CRD detector health and the most recent redacted transition observable, add a bounded reconciliation path, and surface Pause/Resume and shutdown errors to the operator. Then reproduce an active-CRD apply -> Pause -> restore -> Resume -> reapply -> Explicit Quit cycle and verify exact animation/taskbar restoration before exit. The remaining Phase 6 matrix then covers crash recovery, autostart after login, Explorer restart, Windows 10, multi-monitor/secondary taskbars, Event Log fault handling, portable-path movement, unavailable WebView2, and resource use.
+Phases 1 through 5 and Windows icon packaging are implemented. The precise next implementation checkpoint is target-machine acceptance of v0.1.6: confirm Start with Windows launches after sign-in without a false path warning, then reproduce active-CRD apply -> Pause -> restore -> Resume -> reapply -> Explicit Quit and verify exact animation/taskbar restoration before exit. The remaining Phase 6 matrix then covers crash recovery, Explorer restart, Windows 10, multi-monitor/secondary taskbars, Event Log fault handling, portable-path movement, unavailable WebView2, and resource use.
 
 ## Runtime incident checkpoint (2026-08-20)
 

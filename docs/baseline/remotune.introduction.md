@@ -3,11 +3,13 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "introduction"
 status: "active"
-updated: "2026-08-20"
-code_ref: "990cb3fed47dae98bb4bb1a7b0dc7f6b2badbd6a"
+updated: "2026-08-21"
+code_ref: "uncommitted"
 ---
 
 # Remotune Baseline Introduction
+
+**[VERIFIED]** In the target-machine v0.1.5 run, the operator confirmed animation was applied while the UI reported an active CRD session and available recovery snapshot. **[IMPLEMENTED]** `out/remotune-v0.1.6.exe` packages the Start with Windows quoted-path comparison correction. **[UNVERIFIED]** v0.1.6 still needs a target-machine run, startup-after-sign-in observation, and full Pause/Resume/Quit recovery acceptance.
 
 ## Authority and status
 

@@ -3,11 +3,13 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "hallucination"
 status: "active"
-updated: "2026-08-20"
-code_ref: "990cb3fed47dae98bb4bb1a7b0dc7f6b2badbd6a"
+updated: "2026-08-21"
+code_ref: "uncommitted"
 ---
 
 # Remotune Decision and Uncertainty Ledger
+
+**[VERIFIED]** The target-machine v0.1.5 run applied animation while CRD was active and recovery ownership was available. **[IMPLEMENTED]** v0.1.6 contains the quoted Windows Run-value comparison fix. **[UNVERIFIED]** Do not claim autostart-at-login or full quit restoration acceptance until v0.1.6 is observed on the target machine.
 
 This ledger prevents candidate mechanisms and unresolved research from becoming accidental implementation facts. It is authoritative for Remotune decisions, uncertainties, evidence policy, and external technical references; no historical document is required to interpret it.
 

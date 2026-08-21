@@ -3,13 +3,15 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "useguide"
 status: "active"
-updated: "2026-08-20"
-code_ref: "990cb3fed47dae98bb4bb1a7b0dc7f6b2badbd6a"
+updated: "2026-08-21"
+code_ref: "uncommitted"
 ---
 
 # Remotune Use and Behavior Contract
 
-> **Availability:** **[IMPLEMENTED]** A versioned portable executable is produced under `out/`; the current build is `out/remotune-v0.1.4.exe`. On 2026-08-20, its Vue controls rendered and Close-to-tray worked on the target machine. Restore Now, Start with Windows, Pause, and Resume were exercised in v0.1.3. **[UNVERIFIED]** Do not rely on Pause or Explicit Quit to restore Windows state until the unresolved detector/recovery incident is reproduced and fixed.
+**[IMPLEMENTED]** The latest portable artifact is `out/remotune-v0.1.6.exe`. Its Start with Windows fix must still be confirmed by launching at the next Windows sign-in.
+
+> **Availability:** **[IMPLEMENTED]** A versioned portable executable is produced under `out/`; the latest build is `out/remotune-v0.1.6.exe`. v0.1.5 was observed applying animation during an active CRD session. v0.1.6 fixes the false Start with Windows path warning, but startup after sign-in and the full Pause/Resume/Quit restoration cycle remain **[UNVERIFIED]** on the target machine.
 
 ## What Remotune will do
 

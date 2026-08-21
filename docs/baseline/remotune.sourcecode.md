@@ -3,11 +3,13 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "sourcecode"
 status: "active"
-updated: "2026-08-20"
-code_ref: "990cb3fed47dae98bb4bb1a7b0dc7f6b2badbd6a"
+updated: "2026-08-21"
+code_ref: "uncommitted"
 ---
 
 # Remotune Source Architecture
+
+**[IMPLEMENTED]** `normalizeAutostartPath` trims optional outer quotes and whitespace from the Windows Run value before comparing it to the current executable. This preserves quoted portable-path registration while removing the false moved-path warning; focused lifecycle tests cover it.
 
 ## Implementation status
 
