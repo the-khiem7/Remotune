@@ -35,7 +35,9 @@ Phase 4: Wails tray shell
                   ▼
 Phase 5: Compact Vue UI
                   ▼
-Phase 6: Hardening and release evidence
+Phase 6: Visual Effects profiles
+                  ▼
+Phase 7: Hardening and release evidence
 ```
 
 ## Phase 0 — Windows and CRD research spike
@@ -299,7 +301,7 @@ Tooling retained: `tools/phase0/Restore-VisualState.ps1` (generic "apply this ex
 |---|---|---|
 | Windows 10 behavior | **[UNVERIFIED]** | No Windows 10 environment available. The affected value set, mask layout, and unattributed bits must be re-derived there before claiming support. |
 | Multi-monitor and secondary taskbar | **[UNVERIFIED]** | Only one display present on the evidence machine. |
-| Explorer restart reconciliation | **[UNVERIFIED]** | Not exercised during this spike; deferred to the Phase 6 matrix. |
+| Explorer restart reconciliation | **[UNVERIFIED]** | Not exercised during this spike; deferred to the Phase 7 matrix. |
 | Autostart Manager API and moved-portable-path behavior | **[UNVERIFIED]** | Requires the pinned Wails project to exist; belongs to Phase 4. |
 
 ## Phase 1 — Windows tuning engine
@@ -414,7 +416,7 @@ Implemented in `engine/internal/crd`:
 - active-client set keyed by the per-session JID resource;
 - immediate redaction of account email and client `ip:port`.
 
-**[UNVERIFIED]**, deferred to Phase 6: transition deduplication under adversarial reordering, Event Log rotation/clear fallback, and detector health/error reporting as a first-class signal (errors currently surface as Go `error` values, not yet as a diagnostics-facing health state).
+**[UNVERIFIED]**, deferred to Phase 7: transition deduplication under adversarial reordering, Event Log rotation/clear fallback, and detector health/error reporting as a first-class signal (errors currently surface as Go `error` values, not yet as a diagnostics-facing health state).
 
 ### Phase 2 recorded evidence
 
@@ -587,9 +589,40 @@ Gate coverage, by baseline requirement:
 ### Acceptance gate
 
 - Vue renders verified backend state and never assumes a click changed Windows.
-- No dashboard, Performance Options mimic, individual Visual Effects checklist, or Minimal/Recommended/Aggressive/Custom profile UI exists.
+- The current UI has no profile configuration surface. The approved Phase 6 scope adds only the Visual Effects choices and checkbox list, not a dashboard or the Advanced/Data Execution Prevention tabs.
 
-## Phase 6 — Hardening
+## Phase 6 — Visual Effects profiles
+
+**Status:** **[PLANNED]**. This phase expands the remote-session automation contract; it does not alter the detector, taskbar auto-hide ownership, or recovery invariant.
+
+### Product contract
+
+| Context | Available choice | Meaning |
+|---|---|---|
+| CRD ON | Let Windows choose, Best Appearance, Best Performance, Custom | The selected target applies while the CRD session is connected. Custom is the persisted 17-checkbox Remotune profile. |
+| CRD OFF | Revert to snapshot, Let Windows choose, Best Appearance, Best Performance | The selected action applies after disconnection. Snapshot is the exact pre-connection state; the other choices intentionally replace it. |
+
+Selecting or clearing an individual CRD-on checkbox chooses `Custom`. If the resulting full selection equals a built-in target, the UI normalizes to that target. `VisualFXSetting` remains a label written only after the complete target state converges; it is not used as a substitute for the effect values.
+
+### Deliverables
+
+- Persisted `CRDOnProfile` and `CRDOffAction` settings, with a versioned Remotune Custom Visual Effects selection.
+- A profile compiler that produces the complete three-layer target state and reuses the existing bounded convergence/verification path.
+- Built-in target definitions for Let Windows choose, Best Appearance, and Best Performance, with the screenshot-supplied checkbox combinations retained as the product reference.
+- A compact Wails settings surface that mirrors the Visual Effects tab's four radios and 17 checkboxes only.
+- Coordinator lifecycle changes: capture the original snapshot before the first connected override; restore it only for the snapshot off-action; retire it only after a selected off profile has converged and verified.
+- Diagnostics that distinguish configured profile, observed Visual Effects state, owned snapshot, and the most recent apply/restore outcome.
+
+### Acceptance gate
+
+- Start from each built-in profile and an arbitrary Custom selection; CRD ON applies the selected target and reports any residual difference.
+- Custom editing selects Custom; an exact built-in match selects its corresponding radio.
+- CRD OFF with Snapshot restores every affected value exactly, including the opaque mask and font smoothing type.
+- CRD OFF with a built-in profile applies that profile, verifies it, and retires ownership so later Quit does not undo the chosen disconnected state.
+- Pause and Explicit Quit restore a still-owned snapshot; failed applies/restores retain recovery data and surface the residual error.
+- The existing live v0.1.6 autostart and Pause/Resume/Quit acceptance remains mandatory before release.
+
+## Phase 7 — Hardening
 
 **Status:** **[PLANNED]**; depends on all prior phases.
 
@@ -636,11 +669,12 @@ Gate coverage, by baseline requirement:
 
 ### Visual Effects
 
-- [ ] Apply Windows Best Performance behavior.
+- [ ] Apply the selected CRD-on Visual Effects profile.
 - [ ] Capture all prior affected state.
 - [ ] Restore arbitrary Custom state exactly.
 - [ ] Prevent duplicate connection from overwriting baseline.
-- [ ] Expose no Visual Effects editor.
+- [ ] Apply the selected CRD-off action and retire ownership only after it verifies.
+- [ ] Expose the bounded Visual Effects profile surface without exposing Advanced or Data Execution Prevention settings.
 
 ### Taskbar
 
@@ -718,7 +752,7 @@ Gate coverage, by baseline requirement:
 
 ## Exact next action
 
-Phases 1 through 5 and Windows icon packaging are implemented. The precise next implementation checkpoint is target-machine acceptance of v0.1.6: confirm Start with Windows launches after sign-in without a false path warning, then reproduce active-CRD apply -> Pause -> restore -> Resume -> reapply -> Explicit Quit and verify exact animation/taskbar restoration before exit. The remaining Phase 6 matrix then covers crash recovery, Explorer restart, Windows 10, multi-monitor/secondary taskbars, Event Log fault handling, portable-path movement, unavailable WebView2, and resource use.
+Phases 1 through 5 and Windows icon packaging are implemented, but Phase 5 acceptance is still open. The v0.1.7 Start with Windows action has a verified quoted `HKCU\...\Run` entry whose normalized path exists and matches the running executable; Pause/Resume and Explicit Quit have user-observed expected restoration behavior. The remaining exact checkpoint is one target-machine sign-out/sign-in that confirms v0.1.7 launches without a false path warning. `build/config.yml` is now the sole semantic-version source for Wails metadata and `out/remotune-v<version>.exe`; the redundant secondary version source is retired. Phase 6 is an approved, documented plan only; do not begin its profile-domain, persistence, or Wails UI implementation until this Phase 5 gate closes. Phase 7 then covers crash recovery, Explorer restart, Windows 10, multi-monitor/secondary taskbars, Event Log fault handling, portable-path movement, unavailable WebView2, and resource use.
 
 ## Runtime incident checkpoint (2026-08-20)
 

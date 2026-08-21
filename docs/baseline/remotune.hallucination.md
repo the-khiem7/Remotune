@@ -9,7 +9,7 @@ code_ref: "uncommitted"
 
 # Remotune Decision and Uncertainty Ledger
 
-**[VERIFIED]** The target-machine v0.1.5 run applied animation while CRD was active and recovery ownership was available. **[IMPLEMENTED]** v0.1.6 contains the quoted Windows Run-value comparison fix. **[UNVERIFIED]** Do not claim autostart-at-login or full quit restoration acceptance until v0.1.6 is observed on the target machine.
+**[VERIFIED]** The target-machine v0.1.5 run applied animation while CRD was active and recovery ownership was available. **[IMPLEMENTED]** v0.1.6 contains the quoted Windows Run-value comparison fix. **[VERIFIED]** v0.1.7 writes the quoted Windows Run entry, and its normalized path exists and matches the running executable; Pause/Resume and Explicit Quit have user-observed expected restoration behavior. **[UNVERIFIED]** Do not claim autostart-at-login until v0.1.7 is observed after a target-machine sign-in.
 
 **[VERIFIED]** On 2026-08-21, the host installed Wails CLI `v3.0.0-beta.8` at `%USERPROFILE%\go\bin\wails3.exe`; `wails3 dev` initially failed only because the manually scaffolded project lacked `build/config.yml`. That configuration and a native dev entrypoint are now implemented. A running hot-reload tray session remains **[UNVERIFIED]** until directly observed.
 
@@ -24,12 +24,12 @@ All items in this section are **[DECIDED]**.
 1. The official product brand is `Remotune`; `CRD Autotune` is a previous codename only.
 2. Remotune runs on the Controlled machine. In the current setup, the work machine controls the home machine.
 3. CRD is the first provider, but the product brand remains provider-neutral.
-4. On CRD connection, enabled automation applies Windows Best Performance and disables Controlled-machine taskbar auto-hide.
-5. On CRD disconnection, Remotune restores the exact previous affected Windows state; it does not force Best Appearance.
-6. `Best Performance` means the existing Windows Performance Options preset, not a Remotune-defined profile.
+4. On CRD connection, enabled automation captures the original affected state, applies the selected CRD-on Visual Effects profile, and disables Controlled-machine taskbar auto-hide.
+5. On CRD disconnection, Remotune follows the selected CRD-off action: restore the exact previous affected Windows state, or apply Let Windows choose, Best Appearance, or Best Performance deliberately.
+6. `Best Performance`, `Best Appearance`, and `Let Windows choose` are Windows Performance Options targets. `Custom` is a Remotune-persisted selection of the 17 Visual Effects checkboxes and is available only for CRD-on automation.
 7. Exact snapshot/restore and durable crash recovery are mandatory.
-8. Windows owns the Visual Effects configuration model. Remotune owns automation only.
-9. Remotune will not expose individual Visual Effects controls, recreate Performance Options, or offer Minimal/Recommended/Aggressive/Custom remote profiles.
+8. Windows remains the source of truth for applied Visual Effects state. Remotune owns the bounded profile configuration and automation lifecycle.
+9. Remotune exposes only the Performance Options Visual Effects radios and 17 checkboxes required for CRD automation. It does not expose Advanced/Data Execution Prevention settings, generic Windows tuning, or Minimal/Recommended/Aggressive profiles.
 10. The product is a compact, G-Helper-inspired tray utility, not a G-Helper clone, dashboard, generic optimizer, or tweak suite.
 11. CRD Windows Event Log events are the chosen primary detector direction. Host process presence and network/system heuristics are not connection truth.
 12. Startup must reconstruct current CRD state before relying on future subscriptions.
@@ -51,7 +51,7 @@ All items in this section are **[DECIDED]**.
 28. Normal operation should preferably avoid whole-app Administrator elevation.
 29. CRD identity data such as client email/account is not required for core state and must not be persisted by default.
 30. Product claims are limited to switching Windows Visual Effects; Remotune cannot promise that every application stops custom animation.
-31. Future provider expansion may add RDP, RustDesk, AnyDesk, or similar detectors, but must not expand Remotune into a Windows settings replacement.
+31. Future provider expansion may add RDP, RustDesk, AnyDesk, or similar detectors, but must not expand Remotune beyond its bounded CRD-oriented Visual Effects profile surface into a general Windows settings replacement.
 32. When feature breadth conflicts with reliability, preserve user state and reliable restoration first.
 
 ## Decisions closed by Phase 0 evidence

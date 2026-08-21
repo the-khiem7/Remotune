@@ -7,7 +7,7 @@ info:
   description: "Automatically tunes Windows for remote desktop sessions"
   copyright: ""
   comments: ""
-  version: "0.1.6"
+  version: "0.1.7"
 
 dev_mode:
   root_path: .
@@ -26,9 +26,9 @@ dev_mode:
       - "*.go"
     git_ignore: true
   executes:
-    - cmd: 'cd frontend && npm ci'
+    - cmd: 'cd frontend && bun install --frozen-lockfile'
       type: once
-    - cmd: 'cd frontend && npm run dev'
+    - cmd: 'cd frontend && bun run dev'
       type: background
     - cmd: 'wails3 generate bindings -ts'
       type: blocking

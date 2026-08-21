@@ -28,15 +28,15 @@ Before CRD
 CRD connects
 ├─ Remotune saves the affected Visual Effects state
 ├─ Remotune saves taskbar auto-hide state
-├─ Windows Visual Effects switch to Best Performance
+├─ Windows Visual Effects switch to the selected CRD-on profile
 └─ Controlled-machine taskbar auto-hide switches OFF
 
 CRD disconnects
-├─ Visual Effects return to the exact saved state
+├─ Visual Effects follow the selected CRD-off action
 └─ taskbar auto-hide returns to the exact saved state
 ```
 
-“Best Performance” refers to the existing Windows Performance Options choice. Remotune does not supply its own performance profile and does not control CRD encoding, transport, or network behavior.
+**[IMPLEMENTED]** The current build applies Best Performance and restores the exact saved state. **[PLANNED]** The profile release adds CRD-on choices for Let Windows choose, Best Appearance, Best Performance, and Remotune Custom; CRD-off choices for Revert to snapshot, Let Windows choose, Best Appearance, and Best Performance. Remotune does not control CRD encoding, transport, or network behavior.
 
 ## Install and first run
 
@@ -109,7 +109,7 @@ The surface may display:
 - Start with Windows;
 - Restore Now and Settings/diagnostics.
 
-It must not display every Windows Visual Effects checkbox, mimic Performance Options, offer Minimal/Recommended/Aggressive/Custom profiles, or grow into a dashboard. The exact visual composition may change without changing this behavior contract.
+**[PLANNED]** Settings will display the Visual Effects radios and 17 checkboxes from the Windows Performance Options Visual Effects tab. Editing a checkbox selects Remotune Custom; returning to an exact built-in combination selects that profile. The UI must not include Performance Options Advanced/Data Execution Prevention settings, Minimal/Recommended/Aggressive profiles, or a dashboard.
 
 ## Tray behavior
 
@@ -216,7 +216,7 @@ Remotune does not:
 - replace CRD or act as a remote desktop client;
 - optimize a network, codec, or CRD transport;
 - disable every custom animation in every application;
-- expose Windows' individual Visual Effects settings;
+- expose Windows settings outside the approved Visual Effects profile surface;
 - provide general Windows tweaking/debloating;
 - guarantee an installer-free machine has WebView2;
 - currently support RDP, RustDesk, AnyDesk, or other providers.

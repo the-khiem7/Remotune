@@ -49,7 +49,12 @@ func buildTrayMenu(app *application.App, mainWindow *application.WebviewWindow, 
 			slog.Error("autostart toggle failed", "error", err)
 			return
 		}
-		autostartItem.SetChecked(enable)
+		actual, err := lifecycle.GetAutostartStatus()
+		if err != nil {
+			slog.Error("autostart verification failed", "error", err)
+			return
+		}
+		autostartItem.SetChecked(actual.Registered && actual.PathMatch)
 	})
 
 	menu.AddSeparator()

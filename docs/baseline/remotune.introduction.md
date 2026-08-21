@@ -11,7 +11,7 @@ code_ref: "uncommitted"
 
 **[VERIFIED]** In the target-machine v0.1.5 run, the operator confirmed animation was applied while the UI reported an active CRD session and available recovery snapshot. **[IMPLEMENTED]** `out/remotune-v0.1.6.exe` packages the Start with Windows quoted-path comparison correction. **[UNVERIFIED]** v0.1.6 still needs a target-machine run, startup-after-sign-in observation, and full Pause/Resume/Quit recovery acceptance.
 
-**[IMPLEMENTED]** The development workflow is now host-native: `%USERPROFILE%\go\bin\wails3.exe` is installed at the pinned `v3.0.0-beta.8`; `wails3 dev` invokes the `build/config.yml` dev graph with Vite hot reload, and `wails3 task` runs the repository Taskfile for verification and portable Windows packaging. Docker is no longer a supported development boundary.
+**[IMPLEMENTED]** The development workflow is now host-native: `%USERPROFILE%\go\bin\wails3.exe` is installed at the pinned `v3.0.0-beta.8`; `wails3 dev` invokes the `build/config.yml` dev graph with Vite hot reload, and `wails3 task` runs the repository Taskfile for verification and portable Windows packaging. `build/config.yml` is the sole semantic-version source for both Wails metadata and versioned portable artifacts. Docker is no longer a supported development boundary.
 
 **[IMPLEMENTED]** The Wails Go module, CLI, and frontend runtime are locked to the same exact `v3.0.0-beta.8` release through `go.mod`, `frontend/package.json`, and `frontend/bun.lock`. Wails lifecycle work is internal to `ServiceStartup`/`ServiceShutdown`; generated Vue bindings expose only operator commands and status reads.
 
@@ -64,7 +64,7 @@ Full detail is in the [roadmap](remotune.roadmap.md). The standalone `engine/` m
 
 **[DECIDED]** The core invariant is: every Remotune-owned change must have a durable, reliable path back to the exact user state that existed before Remotune changed it.
 
-**[DECIDED]** The product boundary is: Remotune automates remote-session transitions; Windows remains the source of truth for Windows Visual Effects configuration.
+**[DECIDED]** The product boundary is: Remotune automates remote-session transitions and will expose the Windows Performance Options **Visual Effects** choices needed for that automation. Windows remains the source of truth for the applied Visual Effects state; Remotune owns the selected CRD-on profile, the selected CRD-off action, and the durable snapshot required for recovery. The scope excludes the Advanced and Data Execution Prevention tabs and generic Windows tuning.
 
 **[IMPLEMENTED]** The canonical app-mark source is `assets/branding/remotune.svg`. Derived PNGs serve Wails application and tray identity; `build/windows/icon.ico` and `build/windows/wails.exe.manifest` generate the Windows `.syso` resource before the versioned portable executable is compiled.
 
@@ -112,11 +112,11 @@ Before CRD
 CRD Connected
 ├─ snapshot affected Visual Effects state
 ├─ snapshot taskbar auto-hide state
-├─ Windows Visual Effects → Adjust for best performance
+├─ Windows Visual Effects → selected CRD-on profile
 └─ taskbar auto-hide      → OFF
 
 CRD Disconnected
-├─ Windows Visual Effects → exact previous state
+├─ Windows Visual Effects → selected CRD-off action
 └─ taskbar auto-hide      → exact previous state
 ```
 
@@ -152,13 +152,13 @@ Recommended names:
 
 Current CRD-specific definition:
 
-> Remotune is a lightweight Windows tray utility that detects Chrome Remote Desktop sessions, switches Windows Visual Effects to Best Performance, disables taskbar auto-hide while remote control is active, and restores the user's previous Windows state after disconnect.
+> Remotune is a lightweight Windows tray utility that detects Chrome Remote Desktop sessions, applies a selected Windows Visual Effects profile while remote control is active, disables taskbar auto-hide, and then restores a snapshot or applies the selected CRD-off Visual Effects choice after disconnect.
 
 The provider-neutral brand does not broaden the product into a generic Windows tuning suite. The domain remains remote-session automation.
 
 ## Meaning of Best Performance
 
-**[DECIDED]** `Best Performance` means the behavior represented by:
+**[DECIDED]** The supported CRD-on choices are `Let Windows choose`, `Best Appearance`, `Best Performance`, and `Custom`. The supported CRD-off choices are `Revert to snapshot`, `Let Windows choose`, `Best Appearance`, and `Best Performance`. `Best Performance` means the behavior represented by:
 
 ```text
 System Properties
@@ -170,9 +170,9 @@ System Properties
 → Adjust for best performance
 ```
 
-The same Windows surface also contains “Let Windows choose what's best for my computer,” “Adjust for best appearance,” “Custom,” and the Visual Effects checklist. Remotune does not redefine these concepts.
+The same Windows surface contains “Let Windows choose what's best for my computer,” “Adjust for best appearance,” “Custom,” and the 17-item Visual Effects checklist. Remotune adopts those three Windows profiles as explicit targets. Its `Custom` profile is the persisted set of checkbox choices made in Remotune; editing any checkbox selects `Custom`, while a full match with a built-in target normalizes back to that target.
 
-A user may begin in Best Appearance, Best Performance, Let Windows choose, or an arbitrary Custom combination. Disconnect must restore the exact affected state, not force Best Appearance and not merely select the Custom radio option after losing its checkbox values.
+A user may begin in Best Appearance, Best Performance, Let Windows choose, or an arbitrary Custom combination. `Revert to snapshot` restores that exact affected state; selecting a CRD-off profile is an intentional replacement of it, not a recovery operation.
 
 ## Required behavior
 
@@ -205,7 +205,7 @@ Reliable connection detection is the most important technical component: unrelia
 - **[PLANNED]** `Restore Now` restores only a valid Remotune-owned snapshot and otherwise reports that no restorable snapshot exists.
 - **[PLANNED]** Support `Start with Windows`; moving or deleting a portable executable may invalidate startup registration and must be handled or documented clearly.
 - **[PLANNED]** The UI may enable/disable overall automation and optionally the Visual Effects and taskbar categories independently.
-- **[PLANNED candidate]** A manual Apply Best Performance action may exist for development or troubleshooting but must not become the primary workflow.
+- **[PLANNED]** The CRD-on profile and CRD-off action are durable preferences. Changing a CRD-on profile while CRD is connected reconciles to the new target without replacing the original snapshot; changing a CRD-off action controls the next disconnected transition.
 
 ## Product and UX constraints
 
@@ -224,12 +224,12 @@ Reliable connection detection is the most important technical component: unrelia
 - a CRD replacement or remote desktop client;
 - a network or codec optimizer;
 - a Windows debloater, generic system tweaker, or customization suite;
-- a replacement, mimic, or alternative UI for Windows Performance Options;
-- a Visual Effects editor or user-facing checkbox list;
-- a profile engine with Minimal, Recommended, Aggressive, Custom Remote Profile, or similar presets;
+- a replacement for all Windows Performance Options tabs, Advanced settings, or Data Execution Prevention;
+- a generic Visual Effects editor unrelated to CRD automation;
+- a profile engine with Minimal, Recommended, Aggressive, or unbounded tuning presets;
 - a dashboard or app expected to remain open on-screen.
 
-Internal knowledge of individual Visual Effects values is allowed only to apply and restore Windows state correctly.
+The CRD profile surface is deliberately limited to the Visual Effects choices and checklist shown in Windows Performance Options. Internal knowledge of individual values remains subject to the existing snapshot, convergence, and verification requirements.
 
 ## Framework and distribution rationale
 
@@ -245,7 +245,7 @@ Wails v3 is selected over v2 because this product benefits directly from first-c
 - **[DECIDED]** Wails uses WebView2 on Windows. “Single executable” does not mean “zero OS runtime dependencies”; document the requirement and fail clearly when it is unavailable.
 - **[PLANNED]** Prefer normal-user operation. Verify Event Log, Visual Effects, taskbar, and autostart permissions rather than elevating the whole app by default.
 - **[PLANNED]** Remain event-driven with negligible idle CPU, low memory, no aggressive polling, no unnecessary hidden-window frontend activity, and quick apply/restore transitions.
-- **[DECIDED]** Accurate product claim: Remotune switches Windows Visual Effects to Best Performance. Applications may render custom animations independently, so Remotune cannot promise that every animation in every app is disabled.
+- **[DECIDED]** Accurate product claim: Remotune applies the selected Windows Visual Effects profile during a CRD session. Applications may render custom animations independently, so Remotune cannot promise that every animation in every app is disabled.
 
 ## Reliability order
 
@@ -253,7 +253,7 @@ Wails v3 is selected over v2 because this product benefits directly from first-c
 
 1. preserve user Windows state;
 2. correctly detect CRD connection state;
-3. apply Best Performance reliably;
+3. apply the selected Visual Effects profile reliably;
 4. restore reliably;
 5. manage taskbar auto-hide reliably;
 6. recover after crash/restart;
