@@ -11,6 +11,8 @@ code_ref: "uncommitted"
 
 **[VERIFIED]** The target-machine v0.1.5 run applied animation while CRD was active and recovery ownership was available. **[IMPLEMENTED]** v0.1.6 contains the quoted Windows Run-value comparison fix. **[UNVERIFIED]** Do not claim autostart-at-login or full quit restoration acceptance until v0.1.6 is observed on the target machine.
 
+**[VERIFIED]** On 2026-08-21, the host installed Wails CLI `v3.0.0-beta.8` at `%USERPROFILE%\go\bin\wails3.exe`; `wails3 dev` initially failed only because the manually scaffolded project lacked `build/config.yml`. That configuration and a native dev entrypoint are now implemented. A running hot-reload tray session remains **[UNVERIFIED]** until directly observed.
+
 This ledger prevents candidate mechanisms and unresolved research from becoming accidental implementation facts. It is authoritative for Remotune decisions, uncertainties, evidence policy, and external technical references; no historical document is required to interpret it.
 
 The Phase 0 spike of 2026-08-14 converted a large share of the original uncertainty into evidence. Observed values live in [Phase 0 recorded evidence](remotune.roadmap.md#phase-0-recorded-evidence); this ledger records only the resulting decisions and what remains genuinely unresolved.

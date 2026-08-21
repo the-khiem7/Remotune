@@ -5,5 +5,5 @@ export default defineConfig({
   plugins: [vue()],
   base: './',
   build: { outDir: 'dist', emptyOutDir: true },
-  server: { port: Number(process.env.WAILS_VITE_PORT ?? 9245), strictPort: true },
+  server: { host: '127.0.0.1', port: Number(process.env.WAILS_VITE_PORT ?? 9245), strictPort: true },
 })

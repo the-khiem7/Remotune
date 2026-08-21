@@ -4,4 +4,5 @@
 # This script ONLY orchestrates Docker. No project SDK runs on the host.
 
 $ErrorActionPreference = 'Stop'
-docker compose run --rm shell
+Set-Location (Join-Path $PSScriptRoot '..')
+& powershell.exe -NoExit -NoLogo

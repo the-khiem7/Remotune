@@ -11,6 +11,8 @@ code_ref: "uncommitted"
 
 **[IMPLEMENTED]** `normalizeAutostartPath` trims optional outer quotes and whitespace from the Windows Run value before comparing it to the current executable. This preserves quoted portable-path registration while removing the false moved-path warning; focused lifecycle tests cover it.
 
+**[IMPLEMENTED]** Host-native development uses the pinned `%USERPROFILE%\go\bin\wails3.exe` and `build/config.yml`. `scripts/dev.ps1` runs Wails dev mode; Vite hot-reloads frontend changes while Wails rebuilds and relaunches on Go changes.
+
 ## Implementation status
 
 **[IMPLEMENTED]** Phases 1 through 5. The root Go module `github.com/khiemnguyen/remotune` contains the Wails v3 tray shell, migrated Phase 1–3 adapters, coordinator, lifecycle package, and compact Vue/Vite control surface. The standalone `engine/` module is superseded but retained for reference.
@@ -25,7 +27,7 @@ code_ref: "uncommitted"
 
 `frontend/src/App.vue` translates numeric `crd.State` and `application.TuningState` values to display labels at its boundary. It must not call string operations on raw transport values. `frontend/src/wails.ts` remains the sole import point for generated bindings.
 
-`docker-compose.yml` generates bindings, builds the Vue distribution, creates `wails_windows_amd64.syso` from the ICO and manifest, and then builds `out/remotune-v<version>.exe`. The `.syso` is reproducible and ignored; the SVG, PNGs, ICO, and manifest are the committed inputs.
+`scripts/dev.ps1` invokes host-native Wails dev mode. The Wails execution graph generates bindings, starts Vite on port 9245, builds the native app, and runs it against the development server. Docker files are retired infrastructure, not supported development tooling. The `.syso` remains reproducible and ignored; the SVG, PNGs, ICO, and manifest are the committed inputs.
 
 ## Architecture
 
@@ -504,19 +506,19 @@ Adding a detector such as `RDPDetector`, `RustDeskDetector`, or `AnyDeskDetector
 
 ## Build environment
 
-**[IMPLEMENTED]** Docker-only build policy. All compilation, code generation, verification, and testing execute inside Docker containers. The Windows host provides only editor, Git, and Docker/Rancher Desktop.
+**[IMPLEMENTED]** Host-native build policy. Compilation, code generation, verification, and testing execute directly on Windows. Docker/Rancher Desktop is not a supported dependency for the development loop.
 
 ```text
-Dockerfile          → golang:1.26.1-bookworm, Bun 1.2.17, CGO_ENABLED=0
-docker-compose.yml  → verify | build | shell services
-scripts/            → verify.ps1, build-windows.ps1, shell.ps1 (delegates to Docker)
+%USERPROFILE%\go\bin\wails3.exe → pinned Wails CLI v3.0.0-beta.8
+build/config.yml    → Wails dev-mode execution graph
+scripts/            → dev.ps1, verify.ps1, build-windows.ps1, shell.ps1 (host-native)
 ```
 
 Key design choices:
 
 - **No mingw-w64**: Wails v3 Windows builds are CGO-free via `go-winloader`.
 - **No Wails CLI yet**: deferred to Phase 5 (requires GTK dev libs for Linux compilation; binding generation is only needed once a Vue frontend exists).
-- **Caches in named volumes**: Go module and build caches persist across runs without polluting the host.
-- **Cross-compile verification**: `go vet` and `go build` run with `GOOS=windows`; `go test -c` compile-checks all test code; platform-independent tests execute on Linux.
+- **Fast feedback**: Vite HMR updates frontend changes without a native rebuild; Wails detects Go changes and relaunches the native app.
+- **Native verification**: `scripts/verify.ps1` generates bindings and frontend assets, checks formatting, runs `go vet ./...`, and executes the Windows-native short test suite.
 
-Full runbook: [docs/runbook/docker-build-environment.md](../runbook/docker-build-environment.md).
+Historical Docker reference: [docs/runbook/docker-build-environment.md](../runbook/docker-build-environment.md). The active host-native workflow is recorded in this baseline pack.

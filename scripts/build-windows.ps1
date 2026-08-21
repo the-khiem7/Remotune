@@ -25,10 +25,26 @@ if (Test-Path $artifactPath) {
     }
 }
 
-# Ensure output directory exists on the host (bind-mounted into the container).
-New-Item -ItemType Directory -Path "$PSScriptRoot\..\out" -Force | Out-Null
+# Generate bindings and production frontend assets on the host.
+$wails = Join-Path (go env GOPATH) 'bin\wails3.exe'
+if (-not (Test-Path $wails)) {
+    Write-Error "Wails CLI v3.0.0-beta.8 is required at $wails"
+    exit 1
+}
+& $wails generate bindings -ts
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+Push-Location (Join-Path $PSScriptRoot '..\frontend')
+try {
+    npm install --package-lock=false
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    npm run build
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+} finally { Pop-Location }
 
-docker compose run --rm -e "BUILD_VERSION=$version" -e "ARTIFACT_NAME=$artifactName" build
+New-Item -ItemType Directory -Path "$PSScriptRoot\..\out" -Force | Out-Null
+& $wails generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -out wails_windows_amd64.syso
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+go build -trimpath -ldflags "-s -w -H windowsgui -X main.version=$version" -o $artifactPath .
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 if (Test-Path $artifactPath) {

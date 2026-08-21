@@ -13,6 +13,8 @@ code_ref: "uncommitted"
 
 **[DECIDED]** Product direction is approved. **[IMPLEMENTED]** Phases 1 through 5 exist in the root Go module `github.com/khiemnguyen/remotune`: Windows tuning adapters, CRD detector, StateCoordinator and durable recovery, Wails tray shell, and the compact Vue UI. Vue rendering and Close-to-tray have target-machine evidence. Restore Now, Start with Windows, Pause, and Resume were exercised in v0.1.3 but are not yet accepted as an end-to-end recovery workflow because a later detector/recovery incident remains open. The repository also contains documentation, the Phase 0 evidence tooling under `tools/phase0/`, and the original standalone `engine/` module (superseded by the root module).
 
+**[IMPLEMENTED]** Native Windows development is now the supported workflow. The pinned Wails CLI `v3.0.0-beta.8` is installed directly on the host, `build/config.yml` provides its dev-mode execution graph, and `scripts/dev.ps1` starts Vite HMR plus automatic Go rebuild/relaunch. A full live hot-reload session remains **[UNVERIFIED]** until observed with the native tray application.
+
 **[VERIFIED]** A Phase 0 evidence spike was executed on 2026-08-14 on the actual Controlled machine and is now substantially complete. All four areas are closed with reproducible live evidence recorded in [Phase 0 recorded evidence](#phase-0-recorded-evidence), including the exact 22-value set that `Adjust for best performance` changes and a passing arbitrary-`Custom` round-trip. Remaining gaps are environment coverage only: Windows 10, multi-monitor and secondary taskbars, Explorer-restart reconciliation, and the Wails runtime API exercising that requires a live app run.
 
 **Phases 1 through 4 are all implemented.** Phase 2 was unblocked independently of Phase 3.
@@ -690,7 +692,7 @@ Gate coverage, by baseline requirement:
 
 **[IMPLEMENTED]** The UI keeps CRD, automation, tuning, and recovery ownership visibly separate. It exposes only the actual coordinator-backed commands: Pause/Resume, Restore Now, and Start with Windows. Each command is invoked through generated Wails TypeScript bindings and then re-reads authoritative backend state; the UI does not assume a Windows mutation succeeded.
 
-**[IMPLEMENTED]** Docker now installs the pinned Wails CLI, generates bindings, and builds the Vue assets before Go verification or packaging. The UI follows the system light/dark preference and deliberately does not include a dashboard, Windows Performance Options clone, Visual Effects checklist, or tuning presets.
+**[IMPLEMENTED]** The host-native workflow installs the pinned Wails CLI, generates bindings, and builds Vue assets before Go verification or packaging. The UI follows the system light/dark preference and deliberately does not include a dashboard, Windows Performance Options clone, Visual Effects checklist, or tuning presets.
 
 **[VERIFIED]** On 2026-08-20, the corrected v0.1.4 executable rendered the full Vue control surface on the target Windows machine and Close-to-tray worked. Restore Now, Start with Windows, Pause, and Resume were exercised in v0.1.3. **[UNVERIFIED]** Their recovery semantics and Explicit Quit remain open after the recorded runtime incident below.
 
@@ -698,7 +700,7 @@ Gate coverage, by baseline requirement:
 
 **[IMPLEMENTED]** `assets/branding/remotune.svg` is the canonical editable brand source. It is rendered into `assets/app/remotune-256.png` for Wails application identity, `assets/tray/remotune-32.png` for the Windows notification area, and `build/windows/icon.ico` containing 16, 20, 24, 32, 40, 48, 64, and 256 px images for the executable resource.
 
-**[IMPLEMENTED]** The Wails shell embeds the application and tray PNG assets, calls `tray.SetIcon`, and the Docker verify/build pipelines invoke the pinned `wails3 generate syso` command before compiling. The generated Windows resource object is intentionally ignored because it is reproducible from the committed ICO and manifest.
+**[IMPLEMENTED]** The Wails shell embeds the application and tray PNG assets, calls `tray.SetIcon`, and the host-native verification/build scripts invoke the pinned `wails3 generate syso` command before compiling. The generated Windows resource object is intentionally ignored because it is reproducible from the committed ICO and manifest.
 
 **[VERIFIED]** On 2026-08-20, Wails CLI `v3.0.0-beta.8` generated the Windows resource successfully; `go test ./... -count=1 -short` passed 70 tests across 8 packages; and the versioned portable artifact `out/remotune-v0.1.3.exe` built successfully. **[UNVERIFIED]** Manual visual acceptance in Windows Explorer, the title bar, taskbar, and notification area remains required on the target machine.
 

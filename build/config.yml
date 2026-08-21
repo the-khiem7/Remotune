@@ -1,0 +1,40 @@
+version: '3'
+
+info:
+  companyName: "Remotune"
+  productName: "Remotune"
+  productIdentifier: "com.khiemnguyen.remotune"
+  description: "Automatically tunes Windows for remote desktop sessions"
+  copyright: ""
+  comments: ""
+  version: "0.1.6"
+
+# Wails dev mode runs entirely on the Windows host. Vite owns frontend HMR;
+# Wails rebuilds and relaunches the native process when Go sources change.
+dev_mode:
+  root_path: .
+  log_level: warn
+  debounce: 1000
+  ignore:
+    dir:
+      - .git
+      - frontend/node_modules
+      - frontend/bindings
+      - frontend/dist
+      - out
+    file:
+      - .DS_Store
+    watched_extension:
+      - "*.go"
+    git_ignore: true
+  executes:
+    - cmd: 'cd frontend && npm install --package-lock=false'
+      type: once
+    - cmd: 'cd frontend && npm run dev'
+      type: background
+    - cmd: 'wails3 generate bindings -ts'
+      type: blocking
+    - cmd: 'go build -o build/dev/remotune-dev.exe .'
+      type: blocking
+    - cmd: '.\\build\\dev\\remotune-dev.exe'
+      type: primary
