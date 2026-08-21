@@ -11,8 +11,8 @@ tasks:
     deps: [bindings]
     dir: frontend
     cmds:
-      - npm ci
-      - npm run build
+      - bun install --frozen-lockfile
+      - bun run build
 
   resources:
     desc: Generate the reproducible Windows icon resource

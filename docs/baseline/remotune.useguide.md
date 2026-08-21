@@ -11,7 +11,7 @@ code_ref: "uncommitted"
 
 **[IMPLEMENTED]** The latest portable artifact is `out/remotune-v0.1.6.exe`. Its Start with Windows fix must still be confirmed by launching at the next Windows sign-in.
 
-**[IMPLEMENTED]** Developers run `wails3 dev` for the native Windows loop, `wails3 task verify` for native verification, and `wails3 task windows:portable` for portable Windows packaging. The Wails dev graph provides frontend Vite hot reload and automatic relaunch after Go changes. The frontend dependency lockfile is required: verification and packaging use `npm ci` so `@wailsio/runtime` remains exactly aligned with the pinned Wails release.
+**[IMPLEMENTED]** Developers run `wails3 dev` for the native Windows loop, `wails3 task verify` for native verification, and `wails3 task windows:portable` for portable Windows packaging. The Wails dev graph provides frontend Vite hot reload and automatic relaunch after Go changes. The Bun lockfile is required: verification and packaging use `bun install --frozen-lockfile` so `@wailsio/runtime` remains exactly aligned with the pinned Wails release.
 
 > **Availability:** **[IMPLEMENTED]** A versioned portable executable is produced under `out/`; the latest build is `out/remotune-v0.1.6.exe`. v0.1.5 was observed applying animation during an active CRD session. v0.1.6 fixes the false Start with Windows path warning, but startup after sign-in and the full Pause/Resume/Quit restoration cycle remain **[UNVERIFIED]** on the target machine.
 

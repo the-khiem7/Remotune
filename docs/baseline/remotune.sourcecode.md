@@ -31,7 +31,7 @@ code_ref: "uncommitted"
 
 `frontend/src/App.vue` translates numeric `crd.State` and `application.TuningState` values to display labels at its boundary. It must not call string operations on raw transport values. `frontend/src/wails.ts` remains the sole import point for generated bindings.
 
-The Go module, `wails3.exe`, and `@wailsio/runtime` are all fixed at `v3.0.0-beta.8`; `package-lock.json` makes `npm ci` reproducible. A caret range is not acceptable for this Beta framework because it can silently place a different runtime beside the pinned Go transport.
+The Go module, `wails3.exe`, and `@wailsio/runtime` are all fixed at `v3.0.0-beta.8`; `bun.lock` makes `bun install --frozen-lockfile` reproducible. A caret range is not acceptable for this Beta framework because it can silently place a different runtime beside the pinned Go transport.
 
 `wails3 dev` invokes host-native Wails dev mode. The Wails execution graph generates bindings, starts Vite on port 9245, builds the native app, and runs it against the development server. `wails3 task verify` generates bindings and resources, runs the reproducible frontend build, then enforces formatting, `go vet`, and short Go tests. `wails3 task windows:portable` verifies the semantic version agrees between `version.txt` and `build/config.yml`, preserves the versioned artifact convention, and refuses a locked destination. Docker files are retired infrastructure, not supported development tooling. The `.syso` remains reproducible and ignored; the SVG, PNGs, ICO, and manifest are the committed inputs.
 
@@ -525,7 +525,7 @@ Taskfile.yml        → Wails task graph for verification and portable packaging
 Key design choices:
 
 - **No mingw-w64**: Wails v3 Windows builds are CGO-free via `go-winloader`.
-- **Exact runtime lock**: `frontend/package-lock.json` and `npm ci` keep the frontend runtime on the same `v3.0.0-beta.8` release as the Go module and CLI.
+- **Exact runtime lock**: `frontend/bun.lock` and `bun install --frozen-lockfile` keep the frontend runtime on the same `v3.0.0-beta.8` release as the Go module and CLI.
 - **Fast feedback**: Vite HMR updates frontend changes without a native rebuild; Wails detects Go changes and relaunches the native app.
 - **Native verification**: `wails3 task verify` generates bindings and frontend assets, checks formatting, runs `go vet ./...`, and executes the Windows-native short test suite.
 

@@ -712,7 +712,7 @@ Gate coverage, by baseline requirement:
 
 ## Wails v3 convention correction (2026-08-21)
 
-**[IMPLEMENTED]** `go.mod`, the host `wails3.exe`, `frontend/package.json`, and the committed npm lockfile now use exact `v3.0.0-beta.8` releases. Host-native dev, verification, and packaging use `npm ci`, not an unconstrained install, before binding generation and frontend build.
+**[IMPLEMENTED]** `go.mod`, the host `wails3.exe`, `frontend/package.json`, and the committed Bun lockfile now use exact `v3.0.0-beta.8` releases. Host-native dev, verification, and packaging use `bun install --frozen-lockfile`, not an unconstrained install, before binding generation and frontend build.
 
 **[IMPLEMENTED]** Lifecycle work moved to Wails `ServiceStartup` and `ServiceShutdown`, which are intentionally excluded from generated bindings. The Vue renderer receives only status and operator commands; the native tray retains a synchronous package-level shutdown path that blocks quit when state restoration fails. The `ApplicationStarted` event replaces the old busy-wait for application context.
 
