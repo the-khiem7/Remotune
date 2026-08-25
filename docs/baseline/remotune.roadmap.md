@@ -3,8 +3,8 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "roadmap"
 status: "active"
-updated: "2026-08-21"
-code_ref: "uncommitted"
+updated: "2026-08-24"
+code_ref: "42fd37dc2a9a083c070c4bfe3547d4dfd190262b"
 ---
 
 # Remotune Implementation Roadmap
@@ -610,7 +610,7 @@ Selecting the CRD-on `Custom` radio keeps Custom visible so its values can be ed
 - **[IMPLEMENTED]** A profile compiler that produces a complete three-layer target state and reuses the bounded convergence/verification path.
 - **[IMPLEMENTED]** Built-in targets for Let Windows choose, Best Appearance, and Best Performance. Let Windows choose is accurately implemented as the Windows label plus the current effect values because writing label `0` does not recompute effects.
 - **[IMPLEMENTED]** A compact Wails settings surface with four CRD-on radios and four CRD-off choices.
-- **[IMPLEMENTED]** Selecting `CRD ON → Custom` opens a separate Remotune Wails editor window beside the main popup, preferentially on its left. It contains a local draft of the persisted Remotune Custom Visual Effects checklist with Windows Performance Options-like interaction. Checkbox changes do not call the coordinator; `Apply changes` submits the complete profile once and `Revert` discards the draft. It neither navigates away from the main popup nor launches the Windows Performance Options dialog. The old native launcher/adoption path is removed.
+- **[VERIFIED]** Selecting `CRD ON → Custom` selects the profile without automatically showing the separate Remotune Wails editor on the accepted target-machine run. The fixed `Custom visual effects` section's `Edit effects` action opens that editor beside the main popup, preferentially on its left. It contains a local draft of the persisted Remotune Custom Visual Effects checklist with Windows Performance Options-like interaction. Checkbox changes do not call the coordinator; `Apply changes` submits the complete profile once and `Revert` discards the draft. It neither navigates away from the main popup nor launches the Windows Performance Options dialog. The source still contains an automatic-open attempt and must be reconciled with this observed behavior before a future release changes the contract.
 - **[IMPLEMENTED]** Coordinator lifecycle changes: capture the original snapshot before the first connected override; restore it only for the snapshot off-action; retire it only after a selected off profile has converged and verified.
 - Diagnostics that distinguish configured profile, observed Visual Effects state, owned snapshot, and the most recent apply/restore outcome.
 
@@ -618,13 +618,13 @@ Selecting the CRD-on `Custom` radio keeps Custom visible so its values can be ed
 
 - **[VERIFIED]** `wails3 task verify` regenerated bindings, completed Bun frozen-lockfile production build, resource generation, `go vet`, and the short Go suite after the Phase 6 implementation.
 - **[IMPLEMENTED]** `out/remotune-v0.1.8.exe` was built successfully from the sole `build/config.yml` semantic version on 2026-08-21 (12,096,000 bytes). This is local packaging evidence, not target-machine acceptance.
-- **[IMPLEMENTED]** Unit coverage exercises profile-store normalization, the profile compiler's label/mask behavior, and selected CRD-off profile retirement. Target-machine observation remains pending.
+- **[IMPLEMENTED]** Unit coverage exercises profile-store normalization, the profile compiler's label/mask behavior, and selected CRD-off profile retirement.
 - Custom editing selects Custom; an exact built-in match selects its corresponding radio.
-- **[IMPLEMENTED]** The Custom editor opens as a separate Remotune window beside the main popup, keeps the main popup open, stays within the Windows work area, and never opens the native Windows Performance Options dialog. It must accept arbitrary checkbox changes without waiting for Windows, then apply all selected effects through one Apply action. **[UNVERIFIED]** Live target-machine placement, reopening after close, draft/revert behavior, and one-shot Apply behavior still need manual acceptance.
+- **[VERIFIED]** The Custom editor opens as a separate Remotune window from the fixed `Custom visual effects` section's `Edit effects` action, keeps the main popup open, stays within the Windows work area, and never opens the native Windows Performance Options dialog. Selecting the Custom radio alone does not open it on the accepted target-machine run. It must accept arbitrary checkbox changes without waiting for Windows, then apply all selected effects through one Apply action.
 - CRD OFF with Snapshot restores every affected value exactly, including the opaque mask and font smoothing type.
 - CRD OFF with a built-in profile applies that profile, verifies it, and retires ownership so later Quit does not undo the chosen disconnected state.
-- Pause and Explicit Quit restore a still-owned snapshot; failed applies/restores retain recovery data and surface the residual error.
-- The deferred v0.1.7 sign-out/sign-in autostart proof remains mandatory before release; it is not a Phase 6 implementation dependency.
+- **[VERIFIED]** With an owned snapshot, Pause restored Windows state, Resume reapplied it, and Explicit Quit restored it again on the target machine.
+- **[VERIFIED]** Start with Windows launched successfully after target-machine sign-in.
 
 ## Phase 7 — Hardening
 
@@ -696,8 +696,8 @@ Selecting the CRD-on `Custom` radio keeps Custom visible so its values can be ed
 ### Lifecycle and UI
 
 - [ ] Hide main window to tray.
-- [ ] Restore owned state on explicit Quit.
-- [ ] Start with Windows works or fails clearly.
+- [x] Restore owned state on explicit Quit with an owned snapshot.
+- [x] Start with Windows launches after target-machine sign-in.
 - [ ] Show CRD and tuning state separately.
 - [ ] Support Pause Automation and Restore Now.
 - [ ] Remain compact and avoid a dashboard or Windows settings reimplementation.
@@ -756,7 +756,7 @@ Selecting the CRD-on `Custom` radio keeps Custom visible so its values can be ed
 
 ## Exact next action
 
-Phase 5 implementation and Windows icon packaging are complete; its v0.1.7 sign-out/sign-in autostart proof is explicitly **[DEFERRED]** to Phase 7/release acceptance. Phase 6 profile application and its Custom editor revision passed the host-native Wails verification gate. Before Phase 7 begins, manually verify on the target machine that selecting `CRD ON → Custom` opens the Remotune editor to the left of the main popup, stays inside the work area, hides and reopens cleanly, accepts several checkbox edits without delay, and applies the whole profile only after `Apply changes`. The currently verified Phase 5 evidence is the quoted `HKCU\...\Run` entry, whose normalized path exists and matches the running executable, plus user-observed expected Pause/Resume and Explicit Quit restoration. `build/config.yml` remains the sole semantic-version source for Wails metadata and `out/remotune-v<version>.exe`; the redundant secondary version source is retired.
+The target-machine acceptance now confirms Start with Windows after sign-in and the owned-snapshot Apply → Pause/restore → Resume/reapply → Explicit Quit/restore sequence. Custom selection does not automatically open the editor in that run; operators open it through the fixed `Custom visual effects` section's `Edit effects` action. The exact next action is to begin Phase 7 hardening with repeated/long CRD sessions, crash/restart recovery, detector reconciliation under live CRD, Explorer restart, and configuration coverage. Before changing a future release, reconcile the source's current automatic-open call with the observed explicit-launch behavior. `build/config.yml` remains the sole semantic-version source for Wails metadata and `out/remotune-v<version>.exe`.
 
 ## Runtime incident checkpoint (2026-08-20)
 
@@ -764,10 +764,10 @@ Phase 5 implementation and Windows icon packaging are complete; its v0.1.7 sign-
 
 **[IMPLEMENTED]** The incident now has bounded mitigation and observability: `Status` carries detector health, the last redacted transition (kind/time/record ID only), skipped-record count, consecutive poll-error count, last poll error, and reconciliation time. The run loop replays the same Event Log history at most every 30 seconds, so it can correct a stale subscription without guessing a connection state. Focused tests cover a live transition diagnostic and stale-subscription reconciliation. **[UNVERIFIED]** This has not yet been reproduced against the operator's active CRD session.
 
-**[IMPLEMENTED]** The Vue control now preserves a command error across its status refresh and shows a success acknowledgement. Pause explains when there is no Remotune-owned snapshot, which is a valid no-op for Windows restoration; the returned `Paused` status remains authoritative. **[UNVERIFIED]** The exact interaction still needs live observation.
+**[IMPLEMENTED]** The Vue control now preserves a command error across its status refresh and shows a success acknowledgement. Pause explains when there is no Remotune-owned snapshot, which is a valid no-op for Windows restoration; the returned `Paused` status remains authoritative. **[VERIFIED]** The owned-snapshot Pause → Resume sequence was subsequently observed on the target machine.
 
-**[IMPLEMENTED]** Tray Quit now invokes `Service.Shutdown` before `app.Quit`; it cancels and waits for the detector loop, then restores the owned snapshot. A restore error blocks exit and changes the tray status rather than silently terminating. `Shutdown` is idempotent and does not wait when startup never began. **[UNVERIFIED]** The complete Wails/live-adapter restoration path still needs reproduction with a confirmed owned snapshot and exact animation/taskbar evidence.
+**[IMPLEMENTED]** Tray Quit now invokes `Service.Shutdown` before `app.Quit`; it cancels and waits for the detector loop, then restores the owned snapshot. A restore error blocks exit and changes the tray status rather than silently terminating. `Shutdown` is idempotent and does not wait when startup never began. **[VERIFIED]** The complete target-machine Explicit Quit restoration path was subsequently observed with an owned snapshot.
 
-**[VERIFIED]** The v0.1.5 Start with Windows control produced a false “moved executable” warning immediately after registering the current executable. The Windows Run value was correctly quoted, but comparison did not remove those outer quotes. Path normalization now trims optional outer quotes before a case-insensitive comparison; unit tests cover quoted and whitespace-padded values. Startup after the next Windows sign-in remains to be observed.
+**[VERIFIED]** The v0.1.5 Start with Windows control produced a false “moved executable” warning immediately after registering the current executable. The Windows Run value was correctly quoted, but comparison did not remove those outer quotes. Path normalization now trims optional outer quotes before a case-insensitive comparison; unit tests cover quoted and whitespace-padded values. **[VERIFIED]** The target machine subsequently launched Remotune after sign-in.
 
 Do not claim Windows 10, multi-monitor, secondary-taskbar, or multi-client-CRD support until those configurations are actually observed.

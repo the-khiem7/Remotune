@@ -3,17 +3,17 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "useguide"
 status: "active"
-updated: "2026-08-21"
-code_ref: "uncommitted"
+updated: "2026-08-24"
+code_ref: "42fd37dc2a9a083c070c4bfe3547d4dfd190262b"
 ---
 
 # Remotune Use and Behavior Contract
 
-**[IMPLEMENTED]** The latest portable artifact is `out/remotune-v0.1.8.exe` (12,096,000 bytes), built locally on 2026-08-21 after the host-native verification gate passed. Its Custom editor and Start with Windows behavior must still be confirmed on the target machine.
+**[IMPLEMENTED]** The latest portable artifact is `out/remotune-v0.1.8.exe` (12,096,000 bytes), built locally on 2026-08-21 after the host-native verification gate passed. **[VERIFIED]** Its Start with Windows behavior was observed after a target-machine sign-in. On that target-machine run, Custom is opened explicitly from the fixed `Custom visual effects` section rather than automatically from its radio selection.
 
 **[IMPLEMENTED]** Developers run `wails3 dev` for the native Windows loop, `wails3 task verify` for native verification, and `wails3 task windows:portable` for portable Windows packaging. The Wails dev graph provides frontend Vite hot reload and automatic relaunch after Go changes. The Bun lockfile is required: verification and packaging use `bun install --frozen-lockfile` so `@wailsio/runtime` remains exactly aligned with the pinned Wails release.
 
-> **Availability:** **[IMPLEMENTED]** A versioned portable executable is produced under `out/`; the latest build is `out/remotune-v0.1.8.exe`. v0.1.5 was observed applying animation during an active CRD session. v0.1.8 includes the Phase 6 Custom editor and batched Apply UX, but target-machine Custom editor behavior, startup after sign-in, and the full Pause/Resume/Quit restoration cycle remain **[UNVERIFIED]**.
+> **Availability:** **[IMPLEMENTED]** A versioned portable executable is produced under `out/`; the latest build is `out/remotune-v0.1.8.exe`. **[VERIFIED]** The target machine confirmed startup after sign-in and the owned-snapshot Apply → Pause/restore → Resume/reapply → Explicit Quit/restore sequence. Custom editing remains explicit: select Custom, then use `Edit effects` in the fixed `Custom visual effects` section to show the editor.
 
 ## What Remotune will do
 
@@ -44,7 +44,7 @@ CRD disconnects
 
 **[VERIFIED]** Normal operation does not require Administrator for the integrations exercised so far: reading CRD events, subscribing to them in real time, reading Visual Effects state, and reading and writing taskbar auto-hide all succeeded as a standard non-elevated user. **[PLANNED]** Any target-system permission incompatibility must still be reported deliberately.
 
-**[PLANNED]** Enabling `Start with Windows` registers the executable's current path. Moving or deleting the portable executable can break that registration; Remotune must handle or document this clearly.
+**[VERIFIED]** Enabling `Start with Windows` registers the executable's current path and launched successfully after target-machine sign-in. Moving or deleting the portable executable can still break that registration; this moved-path case remains to be handled or documented clearly.
 
 ## Normal operation
 
@@ -109,7 +109,7 @@ The surface may display:
 - Start with Windows;
 - Restore Now and Settings/diagnostics.
 
-**[IMPLEMENTED]** Settings display the Visual Effects radios. Selecting `CRD ON → Custom` opens a separate Remotune-owned editor window beside the main popup, preferentially on its left, while the main popup remains open. The main popup presents this as a compact `Custom visual effects` row with an `Edit effects` action. The editor provides a local Custom checklist draft: freely select all desired effects, select `Apply changes` once to save and apply the entire profile, or select `Revert` to discard those unsaved choices. It does not open the native Windows Performance Options dialog or include Advanced/Data Execution Prevention settings, Minimal/Recommended/Aggressive profiles, or a dashboard. Host-native verification passed on 2026-08-21; live target-machine interaction remains **[UNVERIFIED]**.
+**[VERIFIED]** Settings display the Visual Effects radios. On the accepted target-machine run, selecting `CRD ON → Custom` leaves the separate Remotune-owned editor closed; use the fixed `Custom visual effects` row's `Edit effects` action to open it beside the main popup, preferentially on its left, while the main popup remains open. The editor provides a local Custom checklist draft: freely select all desired effects, select `Apply changes` once to save and apply the entire profile, or select `Revert` to discard those unsaved choices. It does not open the native Windows Performance Options dialog or include Advanced/Data Execution Prevention settings, Minimal/Recommended/Aggressive profiles, or a dashboard. The current source contains an automatic-open attempt after the Custom selection, so that source/runtime difference remains an implementation follow-up rather than a user-facing requirement.
 
 ## Tray behavior
 

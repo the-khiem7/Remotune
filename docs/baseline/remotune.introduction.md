@@ -3,13 +3,13 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "introduction"
 status: "active"
-updated: "2026-08-21"
-code_ref: "uncommitted"
+updated: "2026-08-24"
+code_ref: "42fd37dc2a9a083c070c4bfe3547d4dfd190262b"
 ---
 
 # Remotune Baseline Introduction
 
-**[VERIFIED]** In the target-machine v0.1.5 run, the operator confirmed animation was applied while the UI reported an active CRD session and available recovery snapshot. **[IMPLEMENTED]** `out/remotune-v0.1.8.exe` packages the Phase 6 Custom editor and batched Apply revision. Its host-native build, Bun frozen-lockfile frontend build, formatting, `go vet`, and short Go tests passed on 2026-08-21. **[UNVERIFIED]** v0.1.8 still needs a target-machine run, Custom editor acceptance, startup-after-sign-in observation, and full recovery acceptance.
+**[VERIFIED]** Target-machine acceptance confirms the owned-snapshot sequence Apply → Pause/restore → Resume/reapply → Explicit Quit/restore, and Start with Windows after sign-in. **[IMPLEMENTED]** `out/remotune-v0.1.8.exe` packages the Phase 6 Custom editor and batched Apply revision. Its host-native build, Bun frozen-lockfile frontend build, formatting, `go vet`, and short Go tests passed on 2026-08-21. **[VERIFIED]** Selecting `CRD ON → Custom` leaves the editor closed on the accepted target-machine run; the fixed `Custom visual effects` section's `Edit effects` action opens it. The reason this differs from the current source's automatic-open call is not yet established.
 
 **[IMPLEMENTED]** The development workflow is now host-native: `%USERPROFILE%\go\bin\wails3.exe` is installed at the pinned `v3.0.0-beta.8`; `wails3 dev` invokes the `build/config.yml` dev graph with Vite hot reload, and `wails3 task` runs the repository Taskfile for verification and portable Windows packaging. `build/config.yml` is the sole semantic-version source for both Wails metadata and versioned portable artifacts. Docker is no longer a supported development boundary.
 
@@ -70,7 +70,7 @@ Full detail is in the [roadmap](remotune.roadmap.md). The standalone `engine/` m
 
 **[IMPLEMENTED]** Phase 5's Vue window maps backend numeric CRD and tuning enums to display labels before rendering, and reads `PortablePathStatus.PathMismatch` from the actual backend contract. The prior implementation treated a numeric CRD state as a string and crashed during initial render, leaving only the styled window background.
 
-**[VERIFIED]** On 2026-08-20, the target machine opened the corrected `out/remotune-v0.1.4.exe` with its Vue controls rendered in the live Wails window, and Close-to-tray worked. Restore Now, Start with Windows, Pause, and Resume had previously been exercised in v0.1.3, but they are not yet accepted as an end-to-end recovery workflow. A later v0.1.4 observation reported CRD as `Disconnected` during an active connection; Pause from the resulting `Baseline`/no-snapshot state produced no visible Windows change; and a prior Explicit Quit did not restore animation. These safety-critical runtime incidents remain unresolved.
+**[VERIFIED]** On 2026-08-20, the target machine opened the corrected `out/remotune-v0.1.4.exe` with its Vue controls rendered in the live Wails window, and Close-to-tray worked. A later v0.1.4 observation reported CRD as `Disconnected` during an active connection; it remains an incident record, not proof of detector reliability. Subsequent target-machine acceptance confirmed the owned-snapshot Apply → Pause/restore → Resume/reapply → Explicit Quit/restore sequence and Start with Windows after sign-in.
 
 ## Problem and product outcome
 
@@ -172,7 +172,7 @@ System Properties
 
 The same Windows surface contains “Let Windows choose what's best for my computer,” “Adjust for best appearance,” “Custom,” and the 17-item Visual Effects checklist. Remotune adopts those three Windows profiles as explicit targets. Its `Custom` profile is the persisted set of checkbox choices made in Remotune; editing any checkbox selects `Custom`, while a full match with a built-in target normalizes back to that target.
 
-**[IMPLEMENTED]** Choosing `CRD ON → Custom` opens a separate Remotune-owned Wails editor window without replacing or closing the main popup. The editor is positioned immediately to the left of the main popup when the work area permits, otherwise within the usable work area. Its checklist interaction follows the familiar Windows Performance Options Visual Effects model, but it is not the Windows system dialog and does not expose the Advanced or Data Execution Prevention tabs. Checkbox changes stay as a local draft; `Apply changes` submits the complete Custom profile once, and `Revert` discards the local draft. The Wails host-native verification gate passed on 2026-08-21; live multi-window placement and interaction remain **[UNVERIFIED]**.
+**[VERIFIED]** On the accepted target-machine run, choosing `CRD ON → Custom` selects the Custom profile but does not automatically show the separate Remotune-owned editor. The fixed `Custom visual effects` section remains visible below the radios, and its `Edit effects` action opens the editor without replacing or closing the main popup. The editor is positioned immediately to the left of the main popup when the work area permits, otherwise within the usable work area. Its checklist interaction follows the familiar Windows Performance Options Visual Effects model, but it is not the Windows system dialog and does not expose the Advanced or Data Execution Prevention tabs. Checkbox changes stay as a local draft; `Apply changes` submits the complete Custom profile once, and `Revert` discards the local draft. The current source still attempts an automatic open after the selection; reconcile that source/runtime difference before treating automatic launch as a product guarantee.
 
 A user may begin in Best Appearance, Best Performance, Let Windows choose, or an arbitrary Custom combination. `Revert to snapshot` restores that exact affected state; selecting a CRD-off profile is an intentional replacement of it, not a recovery operation.
 
