@@ -9,11 +9,11 @@ code_ref: "uncommitted"
 
 # Remotune Use and Behavior Contract
 
-**[IMPLEMENTED]** The latest portable artifact is `out/remotune-v0.1.8.exe` (12,096,000 bytes), built locally on 2026-08-21 after the host-native verification gate passed. **[VERIFIED]** Its Start with Windows behavior was observed after a target-machine sign-in. On that target-machine run, Custom is opened explicitly from the fixed `Custom visual effects` section rather than automatically from its radio selection.
+**[IMPLEMENTED]** The latest portable artifact is `out/remotune-v0.1.9.exe` (12,106,240 bytes), built locally on 2026-08-25 after the host-native verification gate passed. Its SHA-256 is `d66fe4a3d978cba6da8c337de2261bcea71226ebbcacd1c7a2f11d745560c05b`. **[VERIFIED]** v0.1.8's Start with Windows behavior was observed after a target-machine sign-in. v0.1.9 has not yet received target-machine acceptance.
 
 **[IMPLEMENTED]** Developers run `wails3 dev` for the native Windows loop, `wails3 task verify` for native verification, and `wails3 task windows:portable` for portable Windows packaging. The Wails dev graph provides frontend Vite hot reload and automatic relaunch after Go changes. The Bun lockfile is required: verification and packaging use `bun install --frozen-lockfile` so `@wailsio/runtime` remains exactly aligned with the pinned Wails release.
 
-> **Availability:** **[IMPLEMENTED]** A versioned portable executable is produced under `out/`; the latest build is `out/remotune-v0.1.8.exe`. **[VERIFIED]** The target machine confirmed startup after sign-in and the owned-snapshot Apply → Pause/restore → Resume/reapply → Explicit Quit/restore sequence. Custom editing remains explicit: select Custom, then use `Edit effects` in the fixed `Custom visual effects` section to show the editor.
+> **Availability:** **[IMPLEMENTED]** A versioned portable executable is produced under `out/`; the latest build is `out/remotune-v0.1.9.exe`. **[VERIFIED]** The target machine confirmed startup after sign-in and the owned-snapshot Apply → Pause/restore → Resume/reapply → Explicit Quit/restore for v0.1.8. v0.1.9 retains unverified target-machine acceptance for the frameless popup and current Custom-editor UX.
 
 ## What Remotune will do
 

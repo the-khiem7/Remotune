@@ -15,6 +15,8 @@ code_ref: "uncommitted"
 
 **[IMPLEMENTED]** The Wails Go module, CLI, and frontend runtime are locked to the same exact `v3.0.0-beta.8` release through `go.mod`, `frontend/package.json`, and `frontend/bun.lock`. Wails lifecycle work is internal to `ServiceStartup`/`ServiceShutdown`; generated Vue bindings expose only operator commands and status reads.
 
+**[IMPLEMENTED]** The portable v0.1.9 executable was packaged locally on 2026-08-25 from the current uncommitted version configuration. Its SHA-256 is d66fe4a3d978cba6da8c337de2261bcea71226ebbcacd1c7a2f11d745560c05b; this is packaging evidence, not target-machine acceptance.
+
 ## Authority and status
 
 This Baseline Docs pack is the complete active source of truth for Remotune. An implementer can understand, plan, build, verify, operate, and resume the project using only the five documents linked under [Pack navigation](#pack-navigation). Historical proposal material is non-authoritative and is not required to interpret any requirement.
