@@ -3,8 +3,8 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "roadmap"
 status: "active"
-updated: "2026-08-24"
-code_ref: "42fd37dc2a9a083c070c4bfe3547d4dfd190262b"
+updated: "2026-08-25"
+code_ref: "uncommitted"
 ---
 
 # Remotune Implementation Roadmap
@@ -755,6 +755,8 @@ Selecting the CRD-on `Custom` radio keeps Custom visible so its values can be ed
 **[IMPLEMENTED]** Lifecycle work moved to Wails `ServiceStartup` and `ServiceShutdown`, which are intentionally excluded from generated bindings. The Vue renderer receives only status and operator commands; the native tray retains a synchronous package-level shutdown path that blocks quit when state restoration fails. The `ApplicationStarted` event replaces the old busy-wait for application context.
 
 ## Exact next action
+
+**[IMPLEMENTED]** The main-popup close handler and the Custom Visual Effects editor close handler now use Wails `RegisterHook`, not `OnWindowEvent`. A normal event listener runs alongside Wails' default close handler, which destroyed the window even after the listener called `Cancel`; the cancellable hook runs before that default handler, hides the window, and preserves it for tray reopening. Both frameless popups now prefer 720 px height, reduce to the screen work area when necessary, and keep their title strip fixed outside scrollable content. The main heading and both title strips use the existing application mark. Custom profile configuration is now a compact inline count-and-Edit sub-row. Host-native verification passed; target-machine visual, close/reopen, and responsive-height acceptance remain required.
 
 The target-machine acceptance now confirms Start with Windows after sign-in and the owned-snapshot Apply → Pause/restore → Resume/reapply → Explicit Quit/restore sequence. Custom selection does not automatically open the editor in that run; operators open it through the fixed `Custom visual effects` section's `Edit effects` action. The exact next action is to begin Phase 7 hardening with repeated/long CRD sessions, crash/restart recovery, detector reconciliation under live CRD, Explorer restart, and configuration coverage. Before changing a future release, reconcile the source's current automatic-open call with the observed explicit-launch behavior. `build/config.yml` remains the sole semantic-version source for Wails metadata and `out/remotune-v<version>.exe`.
 

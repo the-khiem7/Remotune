@@ -3,8 +3,8 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "useguide"
 status: "active"
-updated: "2026-08-24"
-code_ref: "42fd37dc2a9a083c070c4bfe3547d4dfd190262b"
+updated: "2026-08-25"
+code_ref: "uncommitted"
 ---
 
 # Remotune Use and Behavior Contract
@@ -109,7 +109,7 @@ The surface may display:
 - Start with Windows;
 - Restore Now and Settings/diagnostics.
 
-**[VERIFIED]** Settings display the Visual Effects radios. On the accepted target-machine run, selecting `CRD ON → Custom` leaves the separate Remotune-owned editor closed; use the fixed `Custom visual effects` row's `Edit effects` action to open it beside the main popup, preferentially on its left, while the main popup remains open. The editor provides a local Custom checklist draft: freely select all desired effects, select `Apply changes` once to save and apply the entire profile, or select `Revert` to discard those unsaved choices. It does not open the native Windows Performance Options dialog or include Advanced/Data Execution Prevention settings, Minimal/Recommended/Aggressive profiles, or a dashboard. The current source contains an automatic-open attempt after the Custom selection, so that source/runtime difference remains an implementation follow-up rather than a user-facing requirement.
+**[VERIFIED]** Settings display the Visual Effects radios. Selecting `CRD ON → Custom` leaves the separate Remotune-owned editor closed on the accepted target-machine run. **[IMPLEMENTED]** The current UI presents a compact sub-row under that selected radio with the configured-effect count and an `Edit` action to open the editor beside the main popup, preferentially on its left, while the main popup remains open. The editor provides a local Custom checklist draft: freely select all desired effects, select `Apply changes` once to save and apply the entire profile, or select `Revert` to discard those unsaved choices. It does not open the native Windows Performance Options dialog or include Advanced/Data Execution Prevention settings, Minimal/Recommended/Aggressive profiles, or a dashboard. The current source contains an automatic-open attempt after the Custom selection, so that source/runtime difference remains an implementation follow-up rather than a user-facing requirement.
 
 ## Tray behavior
 
@@ -134,7 +134,7 @@ Exact labels may change, but useful status, Pause/Resume, Restore, Open, and exp
 
 ### Close window
 
-**[PLANNED]** Hides the window and leaves background detection/automation running in the tray.
+**[IMPLEMENTED]** The main popup and Custom Visual Effects editor use a minimal in-app title strip: there is one X button, no minimise or maximise buttons, and the remaining strip is draggable. The strip remains visible while each window's content scrolls. Selecting X hides that window instead of exiting Remotune. Both popups prefer the same 720 px height and shrink to fit a smaller screen's work area. Tray-icon click and the tray `Open` command can then show the main popup again while background detection and automation continue. **[UNVERIFIED]** This close-and-reopen, aligned-height behavior still needs target-machine acceptance after the Wails hook and frameless-window correction.
 
 ### Pause Automation
 

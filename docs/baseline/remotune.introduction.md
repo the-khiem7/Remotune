@@ -3,8 +3,8 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "introduction"
 status: "active"
-updated: "2026-08-24"
-code_ref: "42fd37dc2a9a083c070c4bfe3547d4dfd190262b"
+updated: "2026-08-25"
+code_ref: "uncommitted"
 ---
 
 # Remotune Baseline Introduction
@@ -69,6 +69,8 @@ Full detail is in the [roadmap](remotune.roadmap.md). The standalone `engine/` m
 **[IMPLEMENTED]** The canonical app-mark source is `assets/branding/remotune.svg`. Derived PNGs serve Wails application and tray identity; `build/windows/icon.ico` and `build/windows/wails.exe.manifest` generate the Windows `.syso` resource before the versioned portable executable is compiled.
 
 **[IMPLEMENTED]** Phase 5's Vue window maps backend numeric CRD and tuning enums to display labels before rendering, and reads `PortablePathStatus.PathMismatch` from the actual backend contract. The prior implementation treated a numeric CRD state as a string and crashed during initial render, leaving only the styled window background.
+
+**[IMPLEMENTED]** The current desktop chrome is frameless and tray-first: both popups use one in-app X button that hides rather than exits, a fixed draggable title strip, and a shared preferred 720 px height that shrinks to the available work area. The main heading and both title strips render the existing Remotune application mark. Selecting the CRD-on Custom profile exposes a compact inline configured-effect count and Edit action rather than a standalone card. These UX changes passed host-native Wails verification but remain **[UNVERIFIED]** on the target machine.
 
 **[VERIFIED]** On 2026-08-20, the target machine opened the corrected `out/remotune-v0.1.4.exe` with its Vue controls rendered in the live Wails window, and Close-to-tray worked. A later v0.1.4 observation reported CRD as `Disconnected` during an active connection; it remains an incident record, not proof of detector reliability. Subsequent target-machine acceptance confirmed the owned-snapshot Apply → Pause/restore → Resume/reapply → Explicit Quit/restore sequence and Start with Windows after sign-in.
 

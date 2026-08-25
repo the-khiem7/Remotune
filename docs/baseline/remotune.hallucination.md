@@ -3,8 +3,8 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "hallucination"
 status: "active"
-updated: "2026-08-24"
-code_ref: "42fd37dc2a9a083c070c4bfe3547d4dfd190262b"
+updated: "2026-08-25"
+code_ref: "uncommitted"
 ---
 
 # Remotune Decision and Uncertainty Ledger
@@ -176,6 +176,10 @@ Still **[UNVERIFIED]**:
 81. **[UNVERIFIED] Runtime incident.** On 2026-08-20, v0.1.4 reported `Disconnected` while the target machine's most recent relevant Event Log transition was a `chromoting` Connected Event ID `1` at 15:18:19 local time. The same live screen was `Baseline` with no recovery snapshot, so Pause had nothing to restore. The operator also reported an earlier Explicit Quit that did not restore animation. Current code does not expose detector/subscription health or complete shutdown outcome, so no root cause is claimed. This blocks any release claim that CRD-driven recovery or restore-before-exit is reliable.
 82. **[DECIDED]** Wails v3 is version-locked as one unit: Go module, host CLI, frontend runtime, and committed npm lockfile all use `v3.0.0-beta.8`; lifecycle methods must use `ServiceStartup`/`ServiceShutdown` so they are not renderer-callable bindings.
 83. **[DECIDED]** Code files contain code only. Architectural explanation, operating instructions, and implementation rationale belong in the active baseline pack; do not add comments to code files for that purpose.
+84. **[DECIDED]** The main popup and Custom Visual Effects editor use frameless in-app chrome with one X hide control, no minimise/maximise controls, and a fixed draggable title strip.
+85. **[DECIDED]** The app's existing Remotune mark, not a hand-drawn letter substitute, appears in the main heading and both in-app title strips.
+86. **[DECIDED]** The Custom configuration entry point is a compact inline sub-row under the selected CRD-on Custom radio; it reports the configured-effect count and provides an Edit action instead of a standalone card.
+87. **[UNVERIFIED]** The 720 px shared popup height, work-area reduction, fixed title strip, and tray close/reopen behavior require target-machine acceptance. Host-native Wails verification alone does not establish Windows runtime behavior.
 
 ## Candidate choices, not requirements
 

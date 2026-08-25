@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { Window } from '@wailsio/runtime'
 import { GetAutostartStatus, GetProfileSettings, OpenCustomEffectsEditor, Pause, PortablePathStatus, RestoreNow, Resume, SetAutostart, SetProfileSettings, Status } from './wails'
+import appMark from '../../assets/app/remotune-256.png'
 
 type CoordinatorStatus = {
   Tuning: number
@@ -86,6 +88,7 @@ const pauseHint = computed(() => status.value?.Paused
     ? 'Pause restores the Remotune-owned baseline, then stops automation.'
     : 'Pause stops automation. There is no Remotune-owned snapshot to restore yet.')
 const profileLabel = computed(() => ({ windowsChoose: 'Let Windows choose', bestAppearance: 'Best Appearance', bestPerformance: 'Best Performance', custom: 'Custom' }[profiles.value?.crdOnProfile ?? ''] ?? 'Loading'))
+const customEffectCount = computed(() => Object.values(profiles.value?.customEffects ?? {}).filter(Boolean).length)
 
 async function refresh(clearError = true) {
   try {
@@ -187,6 +190,10 @@ function openCustomEditor() {
   return run(() => OpenCustomEffectsEditor(), 'Custom Visual Effects editor opened.')
 }
 
+async function hideWindow() {
+  await Window.Hide()
+}
+
 onMounted(async () => {
   await refresh()
   refreshTimer = window.setInterval(refresh, 1500)
@@ -198,7 +205,14 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main v-if="customEditor" class="custom-editor" aria-live="polite">
+  <div class="app-shell">
+    <header class="window-chrome">
+      <span class="window-title"><img class="window-mark" :src="appMark" alt="">{{ customEditor ? 'Remotune Custom Visual Effects' : 'Remotune' }}</span>
+      <button class="window-close" aria-label="Hide window" title="Hide to tray" @click="hideWindow">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 3 10 10M13 3 3 13" /></svg>
+      </button>
+    </header>
+    <main v-if="customEditor" class="custom-editor" aria-live="polite">
     <header class="editor-header"><div><p class="eyebrow">CRD ON</p><h1>Custom Visual Effects</h1><p>Choose effects first, then apply the complete profile in one action.</p></div></header>
     <fieldset class="effect-list" :disabled="busy || !profiles"><legend>Visual Effects</legend>
       <label v-for="effect in visualEffects" :key="effect.key" class="effect-choice"><input type="checkbox" :checked="draftCustomEffects[effect.key]" @change="updateCustomEffect(effect.key, ($event.target as HTMLInputElement).checked)"><span>{{ effect.label }}</span></label>
@@ -206,10 +220,10 @@ onUnmounted(() => {
     <footer class="editor-actions"><span :class="{ 'draft-state': true, dirty: draftDirty }">{{ draftDirty ? 'Unsaved changes' : 'No pending changes' }}</span><div><button class="text-button" :disabled="busy || !draftDirty" @click="revertCustomEffects">Revert</button><button class="secondary" :disabled="busy || !draftDirty" @click="applyCustomEffects">Apply changes</button></div></footer>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <p v-if="notice" class="notice" role="status">{{ notice }}</p>
-  </main>
-  <main v-else class="panel" aria-live="polite">
+    </main>
+    <main v-else class="panel" aria-live="polite">
     <header class="header">
-      <h1>Remotune</h1>
+      <div class="app-heading"><img :src="appMark" alt=""><h1>Remotune</h1></div>
       <button class="switch" :aria-label="automationLabel" :aria-pressed="!status?.Paused" :disabled="busy" @click="toggleAutomation"><span></span></button>
     </header>
 
@@ -234,13 +248,14 @@ onUnmounted(() => {
       <div class="section-heading compact"><div><h2 id="profiles-heading">Visual Effects profiles</h2><p>Profiles are applied and verified by Windows, not inferred by this UI.</p></div></div>
       <fieldset class="profile-group" :disabled="busy || !profiles"><legend>CRD ON</legend>
         <label v-for="option in [{ value: 'windowsChoose', label: 'Let Windows choose' }, { value: 'bestAppearance', label: 'Best Appearance' }, { value: 'bestPerformance', label: 'Best Performance' }, { value: 'custom', label: 'Custom' }]" :key="option.value" class="choice"><input type="radio" name="crd-on" :checked="profiles?.crdOnProfile === option.value" @change="selectOnProfile(option.value)"><span>{{ option.label }}</span></label>
+        <div v-if="profiles?.crdOnProfile === 'custom'" class="custom-profile-row">
+          <span>{{ customEffectCount }} effects configured</span>
+          <button class="text-button" :disabled="busy" @click="openCustomEditor">Edit</button>
+        </div>
       </fieldset>
       <fieldset class="profile-group" :disabled="busy || !profiles"><legend>CRD OFF</legend>
         <label v-for="option in [{ value: 'restoreSnapshot', label: 'Revert to snapshot' }, { value: 'windowsChoose', label: 'Let Windows choose' }, { value: 'bestAppearance', label: 'Best Appearance' }, { value: 'bestPerformance', label: 'Best Performance' }]" :key="option.value" class="choice"><input type="radio" name="crd-off" :checked="profiles?.crdOffAction === option.value" @change="selectOffAction(option.value)"><span>{{ option.label }}</span></label>
       </fieldset>
-      <div v-if="profiles?.crdOnProfile === 'custom'" class="native-effects">
-        <div class="editor-launcher"><div><strong>Custom visual effects</strong><p>Choose the 17 effects Remotune applies during CRD.</p></div><button class="secondary" :disabled="busy" @click="openCustomEditor">Edit effects</button></div>
-      </div>
     </section>
 
     <section class="card" aria-labelledby="state-heading">
@@ -276,5 +291,6 @@ onUnmounted(() => {
       <button class="secondary" :disabled="busy || !status?.Owned" @click="restoreNow">Restore Now</button>
       <button class="text-button" :disabled="busy" @click="() => refresh()">Refresh status</button>
     </footer>
-  </main>
+    </main>
+  </div>
 </template>

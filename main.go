@@ -15,6 +15,12 @@ import (
 
 var version = "dev"
 
+const (
+	popupHeight    = 720
+	popupMinHeight = 360
+	popupMargin    = 12
+)
+
 //go:embed all:frontend/dist
 var frontendAssets embed.FS
 
@@ -55,14 +61,18 @@ func main() {
 		Name:          "main",
 		Title:         "Remotune",
 		Width:         420,
-		Height:        560,
+		Height:        popupHeight,
 		MinWidth:      380,
 		MaxWidth:      450,
-		MinHeight:     520,
+		MinHeight:     popupMinHeight,
+		Frameless:     true,
 		Hidden:        true,
 		DisableResize: false,
+		Windows: application.WindowsWindow{
+			NonClientRegionSupport: true,
+		},
 	})
-	mainWindow.OnWindowEvent(events.Common.WindowClosing, func(event *application.WindowEvent) {
+	mainWindow.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
 		event.Cancel()
 		mainWindow.Hide()
 	})
@@ -71,13 +81,17 @@ func main() {
 		Title:         "Remotune Custom Visual Effects",
 		URL:           "http://wails.localhost/?view=custom",
 		Width:         430,
-		Height:        620,
+		Height:        popupHeight,
 		MinWidth:      400,
-		MinHeight:     520,
+		MinHeight:     popupMinHeight,
+		Frameless:     true,
 		Hidden:        true,
 		DisableResize: false,
+		Windows: application.WindowsWindow{
+			NonClientRegionSupport: true,
+		},
 	})
-	customEffectsWindow.OnWindowEvent(events.Common.WindowClosing, func(event *application.WindowEvent) {
+	customEffectsWindow.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
 		event.Cancel()
 		customEffectsWindow.Hide()
 	})
@@ -102,12 +116,8 @@ func main() {
 func showAtWorkAreaBottomRight(app *application.App, window *application.WebviewWindow) {
 	screen := app.Screen.GetPrimary()
 	if screen != nil {
-		width, height := window.Size()
-		if width == 0 || height == 0 {
-			width, height = 420, 560
-		}
-		const margin = 12
-		window.SetPosition(screen.WorkArea.X+screen.WorkArea.Width-width-margin, screen.WorkArea.Y+screen.WorkArea.Height-height-margin)
+		width, height := fitPopupToWorkArea(window, screen, 420)
+		window.SetPosition(screen.WorkArea.X+screen.WorkArea.Width-width-popupMargin, screen.WorkArea.Y+screen.WorkArea.Height-height-popupMargin)
 	}
 	window.Show()
 	window.Focus()
@@ -121,11 +131,9 @@ func showCustomEffectsEditor(mainWindow, editorWindow *application.WebviewWindow
 	mainX, mainY := mainWindow.Position()
 	mainWidth, _ := mainWindow.Size()
 	editorWidth, editorHeight := editorWindow.Size()
-	if editorWidth == 0 || editorHeight == 0 {
-		editorWidth, editorHeight = 430, 620
-	}
 	if screen != nil {
-		const gap = 12
+		editorWidth, editorHeight = fitPopupToWorkArea(editorWindow, screen, 430)
+		const gap = popupMargin
 		x := mainX - editorWidth - gap
 		if x < screen.WorkArea.X {
 			x = mainX + mainWidth + gap
@@ -149,4 +157,21 @@ func showCustomEffectsEditor(mainWindow, editorWindow *application.WebviewWindow
 	}
 	editorWindow.Show()
 	editorWindow.Focus()
+}
+
+func fitPopupToWorkArea(window *application.WebviewWindow, screen *application.Screen, fallbackWidth int) (int, int) {
+	width, _ := window.Size()
+	if width == 0 {
+		width = fallbackWidth
+	}
+	height := popupHeight
+	availableHeight := screen.WorkArea.Height - popupMargin*2
+	if availableHeight < height {
+		height = availableHeight
+	}
+	if height < popupMinHeight {
+		height = popupMinHeight
+	}
+	window.SetSize(width, height)
+	return width, height
 }

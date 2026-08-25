@@ -3,8 +3,8 @@ baseline_schema: "2.0"
 pack: "remotune"
 document: "sourcecode"
 status: "active"
-updated: "2026-08-24"
-code_ref: "42fd37dc2a9a083c070c4bfe3547d4dfd190262b"
+updated: "2026-08-25"
+code_ref: "uncommitted"
 ---
 
 # Remotune Source Architecture
@@ -27,9 +27,9 @@ code_ref: "42fd37dc2a9a083c070c4bfe3547d4dfd190262b"
 
 ## Current presentation and packaging flow
 
-`main.go` embeds `frontend/dist`, `assets/app/remotune-256.png`, and `assets/tray/remotune-32.png`. It supplies the app icon to Wails, sets the system-tray icon, creates initially hidden main and Custom Visual Effects windows, and binds `internal/lifecycle.Service` as the only Vue-facing backend surface. The main window injects an editor-opening callback into the service constructor; the service exposes only `OpenCustomEffectsEditor` to Vue and has no dependency on a Windows system-settings launcher.
+`main.go` embeds `frontend/dist`, `assets/app/remotune-256.png`, and `assets/tray/remotune-32.png`. It supplies the app icon to Wails, sets the system-tray icon, creates initially hidden frameless main and Custom Visual Effects windows, and binds `internal/lifecycle.Service` as the only Vue-facing backend surface. Both windows use the same preferred 720 px height and reduce to the current screen work area minus 24 px when necessary; the side editor is sized before it is placed beside the main popup, so their top and bottom anchors align. Both use Wails `RegisterHook` for `WindowClosing`: each hook cancels native destruction and hides its window, so the tray icon and `Open` command can show the same window again. The Vue chrome stays outside each scrolling content area, supplies a draggable title strip and a single X button that hides the window, and intentionally provides no minimise or maximise buttons. The main window injects an editor-opening callback into the service constructor; the service exposes only `OpenCustomEffectsEditor` to Vue and has no dependency on a Windows system-settings launcher.
 
-`frontend/src/App.vue` translates numeric `crd.State` and `application.TuningState` values to display labels at its boundary. It chooses the main or Custom editor presentation from the Wails window query. The main window contains the fixed `Custom visual effects` section and its `Edit effects` launcher. The Custom editor copies persisted effects into a local draft, keeps polling from replacing a dirty draft, and sends one complete `SetProfileSettings` call only when the user selects `Apply changes`; `Revert` restores the persisted draft without a backend call. The target-machine run opened the editor through that explicit launcher, although the current source also attempts an automatic open after Custom selection; that discrepancy is recorded in the ledger. It must not call string operations on raw transport values. `frontend/src/wails.ts` remains the sole import point for generated bindings.
+`frontend/src/App.vue` translates numeric `crd.State` and `application.TuningState` values to display labels at its boundary. It chooses the main or Custom editor presentation from the Wails window query. When `Custom` is selected, the CRD-on fieldset reveals a compact sub-row showing the configured effect count and an `Edit` action; it replaces the former standalone Custom Visual Effects card. The Custom editor copies persisted effects into a local draft, keeps polling from replacing a dirty draft, and sends one complete `SetProfileSettings` call only when the user selects `Apply changes`; `Revert` restores the persisted draft without a backend call. The target-machine run opened the editor through an explicit launcher, although the current source also attempts an automatic open after Custom selection; that discrepancy is recorded in the ledger. It must not call string operations on raw transport values. `frontend/src/wails.ts` remains the sole import point for generated bindings.
 
 The Go module, `wails3.exe`, and `@wailsio/runtime` are all fixed at `v3.0.0-beta.8`; `bun.lock` makes `bun install --frozen-lockfile` reproducible. A caret range is not acceptable for this Beta framework because it can silently place a different runtime beside the pinned Go transport.
 
