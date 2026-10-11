@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remotune README illustrations</title>
+<link rel="stylesheet" href="shared.css">
+<script src="shared.js"></script>
+</head>
+<body>
+<div class="sheet">
+
+<div class="item btn" id="nav-why"><span class="ic"><svg viewBox="0 0 24 24"><path d="M8 8.8a4 4 0 1 1 5.7 3.6c-1 .5-1.7 1.2-1.7 2.4"/><path d="M12 19v.2"/></svg></span>Why</div>
+<div class="item btn" id="nav-how"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 12h13M12.5 6.5 18 12l-5.5 5.5"/></svg></span>How it works</div>
+<div class="item btn" id="nav-using"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M3.5 9.5h17"/></svg></span>Using Remotune</div>
+<div class="item btn" id="nav-safety"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3.5 19 6.5v5c0 4.4-3 7.7-7 9.5-4-1.8-7-5.1-7-9.5v-5z"/><path d="m9 12 2.2 2.2L15.2 10"/></svg></span>Safety model</div>
+<div class="item btn" id="nav-requirements"><span class="ic"><svg viewBox="0 0 24 24"><path d="m4.5 7 1.8 1.8L9.5 5.5M4.5 15.5l1.8 1.8 3.2-3.3M13 8h7M13 16.5h7"/></svg></span>Requirements</div>
+<div class="item btn" id="nav-build"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="m7.5 10 3 2.5-3 2.5M13 15h3.5"/></svg></span>Build</div>
+<div class="item btn" id="nav-status"><span class="ic"><svg viewBox="0 0 24 24"><path d="M5.5 19v-7M12 19V5.5M18.5 19v-9.5"/></svg></span>Status</div>
+
+<section class="item" id="workflow" style="height: 695px">
+  <div class="head">
+    <div class="bar"></div>
+    <div class="eyebrow">One CRD session</div>
+    <h2 class="title">Remotune tunes Windows while you are connected, then puts it back</h2>
+  </div>
+  <div class="flow">
+    <article class="stage">
+      <div class="stage-h"><span class="num">1</span><h3>Before CRD</h3></div>
+      <span class="pill">Your state</span>
+      <p class="lead">Windows stays exactly as you left it. Remotune only watches for CRD connect and disconnect events.</p>
+    </article>
+    <div class="arrow"></div>
+    <article class="stage">
+      <div class="stage-h"><span class="num">2</span><h3>CRD connects</h3></div>
+      <span class="pill ok">Tuning: Active</span>
+      <ol class="steps">
+        <li>Save a snapshot of your Visual Effects and taskbar auto-hide to disk</li>
+        <li>Apply your CRD ON profile</li>
+        <li>Turn taskbar auto-hide off so the remote taskbar stays visible</li>
+      </ol>
+    </article>
+    <div class="arrow"></div>
+    <article class="stage">
+      <div class="stage-h"><span class="num">3</span><h3>CRD disconnects</h3></div>
+      <span class="pill">Tuning: Baseline</span>
+      <ol class="steps">
+        <li>Visual Effects follow your CRD OFF choice</li>
+        <li>Taskbar auto-hide returns to its saved state</li>
+        <li>The snapshot is retired once Windows is verified</li>
+      </ol>
+    </article>
+  </div>
+  <div class="note">
+    <span class="note-i">!</span>
+    <p><b>If an apply or restore cannot be verified</b>, Remotune shows Partial/Error and keeps the snapshot, so Restore Now can retry. With no Remotune-owned snapshot, Restore Now restores nothing.</p>
+  </div>
+</section>
+
+<section class="item" id="states" style="height: 945px">
+  <div class="head">
+    <div class="bar"></div>
+    <div class="eyebrow">Status model</div>
+    <h2 class="title">Three states, always shown separately</h2>
+  </div>
+  <div class="two">
+    <section class="lane">
+      <h3>CRD</h3>
+      <p class="sub">What the detector observed</p>
+      <div class="chips"><span class="chip">Unknown</span><span class="chip">Disconnected</span><span class="chip ok">Connected</span></div>
+    </section>
+    <section class="lane">
+      <h3>Automation</h3>
+      <p class="sub">Whether Remotune may react</p>
+      <div class="chips"><span class="chip ok">Enabled</span><span class="chip">Paused</span></div>
+    </section>
+  </div>
+  <section class="lane tuning">
+    <h3>Tuning</h3>
+    <p class="sub">Who owns the current Windows state</p>
+    <svg class="flowsvg" viewBox="-2 0 1057 190" role="img" aria-label="Tuning state flow">
+      <rect class="nd" x="0" y="8" width="216" height="100" rx="14"/>
+      <rect class="nd work" x="279" y="8" width="216" height="100" rx="14"/>
+      <rect class="nd act" x="558" y="8" width="216" height="100" rx="14"/>
+      <rect class="nd work" x="837" y="8" width="216" height="100" rx="14"/>
+      <text class="nt" x="108" y="46">Baseline</text>
+      <text class="ns" x="108" y="72">Your Windows state,</text>
+      <text class="ns" x="108" y="94">no snapshot owned</text>
+      <text class="nt" x="387" y="46">Applying</text>
+      <text class="ns" x="387" y="72">Snapshot saved,</text>
+      <text class="ns" x="387" y="94">profile being written</text>
+      <text class="nt" x="666" y="46">Active</text>
+      <text class="ns" x="666" y="72">Changes verified,</text>
+      <text class="ns" x="666" y="94">snapshot kept</text>
+      <text class="nt" x="945" y="46">Restoring</text>
+      <text class="ns" x="945" y="72">Your state is</text>
+      <text class="ns" x="945" y="94">being put back</text>
+      <path class="ln" d="M224 58H262"/>
+      <polygon class="ah" points="259,50 271,58 259,66"/>
+      <path class="ln" d="M503 58H541"/>
+      <polygon class="ah" points="538,50 550,58 538,66"/>
+      <path class="ln" d="M782 58H820"/>
+      <polygon class="ah" points="817,50 829,58 817,66"/>
+      <path class="ln" d="M945 108V160H108V124"/>
+      <polygon class="ah" points="100,122 108,108 116,122"/>
+      <rect class="lbg" x="346" y="144" width="360" height="32" rx="16"/>
+      <text class="lt" x="526" y="167">verified restore, snapshot retired</text>
+    </svg>
+    <div class="trigs">
+      <p><b>Applying</b> starts when CRD connects, or when automation resumes while connected.</p>
+      <p><b>Restoring</b> starts when CRD disconnects, or on Pause, Restore Now or Quit.</p>
+    </div>
+    <div class="fails">
+      <div class="fail"><b>Partial/Error</b><p>An apply or restore did not verify. The snapshot is kept and Restore Now can retry.</p></div>
+      <div class="fail"><b>Recovery Required</b><p>Recovery data could not be read or retired, so it needs attention.</p></div>
+    </div>
+  </section>
+  <p class="valid"><b>Valid combination:</b> CRD Connected, Automation Paused and Tuning Baseline. A session exists, but Remotune is not tuning it.</p>
+</section>
+
+<section class="item" id="popup" style="height: 1040px">
+  <div class="head">
+    <div class="bar"></div>
+    <div class="eyebrow">The popup - illustration</div>
+    <h2 class="title">Choose once, then leave it in the tray</h2>
+  </div>
+  <div class="cols">
+    <div class="col">
+      <div class="ui">
+        <section class="u-card profiles">
+          <div class="u-sec"><div><h2>Visual Effects profiles</h2><p>Profiles are applied and verified by Windows, not inferred by this UI.</p></div></div>
+          <fieldset class="u-group"><legend>CRD ON</legend>
+            <label class="u-choice"><input type="radio" name="crd-on"><span>Let Windows choose</span></label>
+            <label class="u-choice"><input type="radio" name="crd-on"><span>Best Appearance</span></label>
+            <label class="u-choice"><input type="radio" name="crd-on"><span>Best Performance</span></label>
+            <label class="u-choice"><input type="radio" name="crd-on" checked><span>Custom</span></label>
+            <div class="u-custom"><span>9 effects configured</span><em>Edit</em></div>
+          </fieldset>
+          <fieldset class="u-group"><legend>CRD OFF</legend>
+            <label class="u-choice"><input type="radio" name="crd-off" checked><span>Revert to snapshot</span></label>
+            <label class="u-choice"><input type="radio" name="crd-off"><span>Let Windows choose</span></label>
+            <label class="u-choice"><input type="radio" name="crd-off"><span>Best Appearance</span></label>
+            <label class="u-choice"><input type="radio" name="crd-off"><span>Best Performance</span></label>
+          </fieldset>
+        </section>
+      </div>
+      <p class="cap"><b>CRD ON</b> is applied while you are connected; Custom is your own checklist of the 17 Windows Visual Effects, opened with Edit. <b>CRD OFF</b>: Revert to snapshot restores your exact saved state; the other choices replace it on purpose.</p>
+    </div>
+    <div class="col">
+      <div class="stack">
+        <div class="ui">
+          <div class="u-chrome"><span class="u-title"><img src="../app/remotune-256.png" alt="">Remotune</span><span class="u-x"><svg viewBox="0 0 16 16"><path d="m3 3 10 10M13 3 3 13"/></svg></span></div>
+          <div class="u-head"><div class="u-app"><img src="../app/remotune-256.png" alt=""><h1>Remotune</h1></div><span class="switch on"><span></span></span></div>
+          <div class="u-conn"><span class="u-icon">&#9673;</span><strong>Chrome Remote Desktop</strong><span class="u-pill">Connected</span></div>
+          <section class="u-card">
+            <div class="u-sec"><div><h2>Current state</h2><p>Remotune keeps your original state until the selected action completes safely.</p></div></div>
+            <div class="u-grid"><div><span>Tuning</span><strong>Active</strong></div><div><span>Recovery snapshot</span><strong>Available</strong></div></div>
+          </section>
+        </div>
+        <p class="cap">The switch pauses and resumes automation. CRD connection, tuning state and snapshot are reported separately.</p>
+      </div>
+      <div class="stack">
+        <div class="ui">
+          <section class="u-card"><div class="u-sec"><div><h2>Start with Windows</h2><p>Launch Remotune when you sign in.</p></div><span class="switch on"><span></span></span></div></section>
+          <div class="u-actions"><span class="u-primary">Restore Now</span><span class="u-text">Refresh status</span></div>
+        </div>
+        <p class="cap"><b>Restore Now</b> only acts on a Remotune-owned snapshot. The X hides the window; Remotune keeps running in the tray.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+</body>
+</html>
